@@ -24,6 +24,7 @@
 - `Docs/Ref/*.pdf` 不進版控（檔案超過 GitHub 100MB 上限，且為課程講義未公開）。
 - 不 force push；除 release 流程外不 push `main`。
 - **已知限制**：專案在 Google Drive 掛載路徑（`/mnt/g`），WSL 下凡是寫 `.git/config` 的指令都會報 `chmod on .git/config.lock failed`（`git config`、`push -u` 設上游、刪分支時的設定清理）。commit、branch、worktree 正常。要改設定就在 Windows 端的 git 做，或把設定寫在指令列（`git -c key=value …`）；push 用 `git push origin <branch>`，不要依賴 `-u`。
+- **`index.lock` 互卡**：多個 session 平行收尾時，都會用到主目錄（`dev`）那份 index。合併進 `dev` 一律走 `task-release` 的 `merge-to-dev.sh`（`flock` 排隊）。殘留鎖用 `git-unlock-stale.sh` 清（只刪超過 2 分鐘、且 WSL／Windows 都沒有 git 程序的鎖）。`.claude/settings.json` 設 `GIT_OPTIONAL_LOCKS=0`，讓背景的唯讀 git 指令不去拿鎖。
 
 ## 版本
 
