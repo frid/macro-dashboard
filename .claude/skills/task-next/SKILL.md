@@ -4,9 +4,10 @@ description: >-
   從 TODO.md 挑下一項未完成任務，先補編號、先寫計畫給使用者確認，點頭後才派 subagent 改檔，
   改完另派驗證，再交給 task-release 收尾。當使用者說「下一步」「接著做」「做下一項」
   「/task-next」「把 TODO 的 DA-01 做掉」時使用。
-  硬規則：一次只做一項；先規劃、等使用者點頭再執行；不在 main 上改；使用者沒說「merge」不合併。
+  硬規則：一次只做一項；先規劃、等使用者點頭再執行；任務 worktree 從 dev 開出，不在 main／dev 上改；
+  收尾合併進 dev，使用者沒說「release」不動 main。
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Task Next — 從 TODO.md 接手下一項任務
@@ -20,8 +21,8 @@ metadata:
 
 1. **先規劃再執行**：步驟 3 的計畫沒被使用者點頭前，不改任何檔（補編號除外，見步驟 1）。
 2. **一次一項**：上一項沒 commit，不開下一項。
-3. **不在 `main` 上改**：必須在 worktree／feature branch 上（CLAUDE.md §Git 規則）。
-4. **使用者沒明確說「merge」，不合併回 `main`**。
+3. **不在 `main`／`dev` 上改**：必須在從 `dev` 開出的任務 worktree 上（CLAUDE.md §Git 規則）。
+4. **任務收尾合併進 `dev`；使用者沒明確說「release」，不動 `main`**（release 走 `project-release` skill）。
 5. **要刪檔、搬檔、改檔名，或規格有兩種以上合理解讀 → 停下問使用者**，不猜。
 6. **改檔、驗證都交給 subagent**：主 session 只負責讀 TODO、寫計畫、派工、檢查成果、收尾（`TODO.md`／`VERSION`／`CHANGELOG.md`／頁尾版號與日期／commit 由主 session 做）。主 session 不直接改 `index.html`、`tools/`、`data/`，連「只有一行」也一樣。
 7. **主 session 用量守在六成內**：context 用量超過約 60% → 先收尾（commit），提醒使用者 `/clear` 後再用 `task-next` 接著做。
@@ -36,7 +37,15 @@ git status --short
 git branch --show-current
 ```
 
-- 若目前在 `main` → 停下，請使用者同意後用 EnterWorktree 開 worktree（名稱用任務代號，如 `da-01-indicators`）。
+- 若目前在 `main` 或 `dev` → 停下，請使用者同意後用 EnterWorktree 開 worktree（名稱用任務代號，如 `da-02-fetch`）。
+- **worktree 必須從 `dev` 開出**：EnterWorktree 預設從 `origin/main` 開分支，進去後立刻對齊 `dev`（剛建好、還沒改任何檔時才可以這樣做）：
+
+  ```bash
+  git fetch origin dev:dev          # 本機 dev 對齊遠端（非 fast-forward 會失敗 → 停下回報）
+  git status --short                # 必須是空的
+  git reset --hard dev              # 新分支起點改成 dev
+  git log --oneline -1              # 確認與 dev 同一個 commit
+  ```
 - 有別人未 commit 的改動（`TODO.md` 以外）→ 先回報，別動。
 
 **補編號**：規則以 TODO.md 頂端「# 規則」節為準，動手前重讀。
@@ -165,7 +174,8 @@ verifier 回報後，主 session 自己 Read 截圖確認。**FAIL → 不收尾
 - 做完哪一項、版號、commit hash、分支名
 - 驗證了什麼、結果如何
 - TODO.md 下一個未完成項目
-- 提醒：要上線請說「merge」
+- `dev` 合併 commit（task-release 已合併進 `dev`）
+- 提醒：要上線（`dev` → `main`）請說「release」
 
 然後**停下來**，下一項由使用者決定。
 
@@ -175,4 +185,5 @@ verifier 回報後，主 session 自己 Read 截圖確認。**FAIL → 不收尾
 
 | 版號 | 日期 | 變更 |
 |---|---|---|
+| 1.1.0 | 2026-10-18 | SU-04 改成 dev 分支流程：worktree 從 `dev` 開出、收尾合併進 `dev`、release 才動 `main` |
 | 1.0.0 | 2026-10-18 | 建立：沿用 strategy-matrix `task-next` 1.2.0，改成 Dashboard 專案（資料檔檢查、HTTP server 截圖、版號欄） |

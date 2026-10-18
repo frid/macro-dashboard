@@ -1,0 +1,1117 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>總體經濟指標 Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/6.1.0/echarts.min.js" integrity="sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD" crossorigin="anonymous"></script>
+<style>
+:root {
+  /* 配色取自 Friedrich〈霧海上的旅人〉：岩石、霧、天空、遠山、赭色 */
+  --bg: #ECEAE7;
+  --card: #FBFAF8;
+  --text: #2D261C;
+  --muted: #615D58;
+  --border: #D0CBCA;
+  --up: #4A5F7A;
+  --down: #8A5A2B;
+  --accent: #3F4856;
+  --sub: #8A5A2B;
+  --sub-bg: #F3EBDD;
+  --pending-bg: #E6E3DF;
+  --tag-bg: #E1E3E7;
+  --danger: #A8433A;
+  --danger-bg: #F6E6E3;
+  --danger-text: #6E2A23;
+  --on-banner: #FFFFFF;
+  --banner-shade: 31, 28, 24;
+  --spark-area: rgba(63, 72, 86, 0.10);
+  /* 綜合訊號燈號：擴張＝灰綠、中性＝赭黃、收縮＝磚紅（文字色對 --card、--bg、--pending-bg 皆 ≥ 4.5:1） */
+  --sig-up: #4E6B4A;
+  --sig-up-bg: #E4EADF;
+  --sig-flat: #7A5E1A;
+  --sig-flat-bg: #F3EBDD;
+  --sig-down: #A8433A;
+  --sig-down-bg: #F6E6E3;
+  --neu: #8E8A86;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  line-height: 1.5;
+}
+header {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 280px;
+  /* 上層深色漸層（底部最深）讓白字可讀；底圖為〈霧海上的旅人〉裁切，旅人約在水平 50% */
+  background-color: var(--accent);
+  background-image:
+    linear-gradient(to top, rgba(var(--banner-shade), .78) 0%, rgba(var(--banner-shade), .45) 45%, rgba(var(--banner-shade), .08) 100%),
+    url('assets/wanderer-banner.jpg');
+  background-size: cover;
+  background-position: 50% 40%;
+  color: var(--on-banner);
+  padding: 24px 16px 44px;
+  text-shadow: 0 1px 3px rgba(var(--banner-shade), .7);
+}
+header .inner { width: 100%; }
+header .credit {
+  position: absolute;
+  right: 16px;
+  bottom: 8px;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  font-size: .7rem;
+  line-height: 1.4;
+  text-align: right;
+  opacity: .75;
+}
+header .credit a { color: inherit; }
+@media (max-width: 600px) {
+  header { min-height: 180px; padding-bottom: 56px; }
+  header h1 { font-size: 1.3rem; }
+  header .credit { left: 16px; font-size: .62rem; }
+}
+header .inner, main, footer, section.about { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+header .inner { padding: 0; }
+header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+header p { margin: 2px 0; font-size: .92rem; opacity: .92; }
+main { padding-top: 16px; padding-bottom: 24px; }
+section.cat { margin-bottom: 28px; }
+section.cat h2 {
+  font-size: 1.15rem;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
+}
+section.cat h2 .en { color: var(--muted); font-weight: normal; font-size: .95rem; margin-left: 6px; }
+section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85rem; margin-left: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.card.pending { background: var(--pending-bg); color: var(--muted); }
+.card.error { border-color: var(--danger); }
+.card .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.card .name-zh { font-weight: 600; font-size: 1rem; }
+.card .name-en { color: var(--muted); font-size: .8rem; }
+.card .head-r { flex: none; display: flex; align-items: center; gap: 4px; }
+/* 燈號 pill（UI-11）：G 綠＝沒問題、Y 黃＝警告再觀察、R 紅＝危險、— 灰＝未判 */
+.lamp {
+  flex: none;
+  min-width: 1.7em;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--neu);
+  background: var(--pending-bg);
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: default;
+}
+.lamp.G { border-color: var(--sig-up); background: var(--sig-up-bg); color: var(--sig-up); }
+.lamp.Y { border-color: var(--sig-flat); background: var(--sig-flat-bg); color: var(--sig-flat); }
+.lamp.R { border-color: var(--sig-down); background: var(--sig-down-bg); color: var(--sig-down); }
+.tag {
+  flex: none;
+  font-size: .72rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: var(--tag-bg);
+  color: var(--accent);
+  white-space: nowrap;
+  cursor: default;
+}
+.badge-sub {
+  display: inline-block;
+  font-size: .72rem;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--sub-bg);
+  color: var(--sub);
+  font-weight: 600;
+}
+.value-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.change { font-size: .88rem; font-variant-numeric: tabular-nums; }
+.change.up { color: var(--up); }
+.change.down { color: var(--down); }
+.change.flat { color: var(--muted); }
+.mode { font-size: .75rem; color: var(--muted); }
+.spark { width: 100%; height: 48px; }
+.meta { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.errmsg { color: var(--danger); font-size: .85rem; word-break: break-all; }
+.sig-lead { margin: 0 0 6px; font-size: .9rem; }
+.sig-verdict { margin: 0 0 10px; font-weight: 600; }
+.sig-verdict.exp { color: var(--sig-up); }
+.sig-verdict.neu { color: var(--sig-flat); }
+.sig-verdict.con { color: var(--sig-down); }
+.sig-wrap { overflow-x: auto; margin-bottom: 12px; }
+.sig-table { border-collapse: collapse; background: var(--card); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.sig-table th, .sig-table td { border: 1px solid var(--border); padding: 4px 10px; text-align: center; }
+.sig-table th { background: var(--pending-bg); font-weight: 600; }
+.sig-table th.G { color: var(--sig-up); }
+.sig-table th.Y { color: var(--sig-flat); }
+.sig-table th.R { color: var(--sig-down); }
+.sig-table th.na { color: var(--muted); }
+.sig-table tr.total td { font-weight: 700; }
+.sig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.light {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--neu);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.light:hover { border-color: var(--accent); }
+/* 格子底色與狀態文字顏色依燈號 G／Y／R（UI-11） */
+.light.G { border-left-color: var(--sig-up); background: var(--sig-up-bg); }
+.light.Y { border-left-color: var(--sig-flat); background: var(--sig-flat-bg); }
+.light.R { border-left-color: var(--sig-down); background: var(--sig-down-bg); }
+.light.na { background: var(--pending-bg); }
+.light .lhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.light .lname { font-weight: 600; font-size: .9rem; }
+.light .lstate { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.light .lstate.G { color: var(--sig-up); }
+.light .lstate.Y { color: var(--sig-flat); }
+.light .lstate.R { color: var(--sig-down); }
+.sig-lamps { margin: -4px 0 10px; font-size: .9rem; }
+.sig-lamps b.G { color: var(--sig-up); }
+.sig-lamps b.Y { color: var(--sig-flat); }
+.sig-lamps b.R { color: var(--sig-down); }
+.light .lwhy { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; word-break: break-word; }
+.fatal { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger-text); padding: 16px; border-radius: 8px; margin: 16px 0; }
+footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+/* 關於本站（UI-09） */
+section.about { color: var(--muted); font-size: .85rem; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+section.about h2 { margin: 4px 0 6px; font-size: 1rem; color: var(--text); }
+section.about h3 { margin: 14px 0 4px; font-size: .9rem; color: var(--text); }
+section.about p, section.about ul { margin: 4px 0; }
+section.about ul { padding-left: 1.3em; }
+section.about a { color: var(--accent); }
+@media (max-width: 600px) { section.about { font-size: .82rem; } }
+/* 指標詳細圖（UI-02） */
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { border-color: var(--accent); }
+.card.clickable:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+dialog.detail {
+  width: min(1100px, 95vw);
+  max-width: 95vw;
+  max-height: 94vh;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+}
+dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
+.detail .dbar { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+.detail .dhead { flex: 1; min-width: 0; }
+.detail .dtitle { margin: 0; font-size: 1.2rem; }
+.detail .dtitle .en { color: var(--muted); font-weight: normal; font-size: .9rem; margin-left: 6px; }
+.detail .dmeta { margin-top: 4px; font-size: .8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.detail .dclose {
+  flex: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.detail .dclose:hover { border-color: var(--accent); }
+.detail .dbody { padding: 8px 16px 16px; }
+.detail .dcap { margin: 8px 0 0; font-size: .82rem; color: var(--muted); }
+.detail .dchart { width: 100%; height: 400px; }
+.detail .dchart.yoy { height: 260px; }
+/* 指標細項說明（UI-15） */
+.detail .dinfo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem 1.25rem;
+  margin-top: 1rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border);
+  font-size: .85rem;
+  line-height: 1.6;
+}
+.detail .dinfo h3 { margin: 0 0 .35rem; font-size: .95rem; color: var(--text); }
+.detail .dinfo p, .detail .dinfo ul { margin: .25rem 0; }
+.detail .dinfo ul { padding-left: 1.2em; }
+.detail .dinfo li { margin: .2rem 0; overflow-wrap: anywhere; }
+.detail .dinfo .note { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .detail .dbar { padding: 10px 12px 8px; }
+  .detail .dbody { padding: 4px 8px 12px; }
+  .detail .dchart { height: 300px; }
+  .detail .dchart.yoy { height: 210px; }
+  .detail .dinfo { grid-template-columns: 1fr; font-size: .82rem; }
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>總體經濟指標 Dashboard</h1>
+    <p>依郭維裕教授講義《Fantastic Economic Indicators》整理（政大 EMBA「生技產業之投資分析與個案探討」）。</p>
+    <p>指標依 GDP = C（消費）＋ I（投資）＋ G（政府）＋ NX（淨出口）分類，另加 MC（多重成分）與 IFU（通膨／恐慌／不確定）。</p>
+  </div>
+  <p class="credit">Caspar David Friedrich〈霧海上的旅人〉Wanderer above the Sea of Fog（c. 1818）・Hamburger Kunsthalle・Public domain, via <a href="https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" target="_blank" rel="noopener">Wikimedia Commons</a></p>
+</header>
+<main id="app"><p>載入中…</p></main>
+<section class="about">
+  <h2>關於本站／資料來源與版權</h2>
+  <h3>資料來源</h3>
+  <ul>
+    <li><a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">FRED</a>（Federal Reserve Bank of St. Louis）：多數序列為公共資料，部分序列版權屬原發布機構，使用依 <a href="https://fred.stlouisfed.org/legal/" target="_blank" rel="noopener">FRED 使用條款</a>。</li>
+    <li><a href="https://www.eia.gov/" target="_blank" rel="noopener">EIA</a>（U.S. Energy Information Administration）：美國政府公開資料。</li>
+    <li><a href="https://www.cboe.com/tradable_products/vix/vix_historical_data/" target="_blank" rel="noopener">Cboe</a>（Cboe Global Markets）：VIX 官方每日收盤，使用依 Cboe 網站條款。</li>
+    <li><a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank" rel="noopener">美國財政部</a>（U.S. Department of the Treasury）：每日公債殖利率與國庫券利率，美國政府公開資料；本站用來接續 FRED 尚未收錄的最新交易日。</li>
+    <li><a href="https://finance.yahoo.com/" target="_blank" rel="noopener">Yahoo Finance</a>：非官方來源，僅供參考。</li>
+    <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>：非官方來源，僅供參考；ISM、Baltic Exchange 等原始數據版權屬原機構，有授權限制。</li>
+    <li>衍生序列（年增率、移動平均等）為本站依上述資料自行計算。</li>
+    <li>卡片上標「替代」者為替代序列。</li>
+  </ul>
+  <h3>講義出處</h3>
+  <p>郭維裕教授《Fantastic Economic Indicators》（國立政治大學 EMBA「生技產業之投資分析與個案探討」）。畫面上的判讀說明為本站自行摘要，非講義原文；講義未公開，引用處以 [K 頁碼] 標示。</p>
+  <h3>製作者</h3>
+  <p>侯榮富 博士</p>
+  <h3>版權與聲明</h3>
+  <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
+  <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
+</section>
+<footer>版本 <span id="app-version">0.15.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<dialog class="detail" id="detail" aria-labelledby="detail-title">
+  <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
+  <div class="dbody"></div>
+</dialog>
+
+<script>
+'use strict';
+
+// 暫行顯示規則（以指標 id 為 key），DA-05 完成後改用正式衍生計算。
+//   mom    : 月增減（與前一期相減，單位同序列，PAYEMS 為千人）
+//   yoy    : 年增率 %（與一年前比）
+//   spread : 兩條 component 序列按日期對齊相減（百分點）
+const DISPLAY_RULES = {
+  'nonfarm-payrolls': { mode: 'mom' },
+  'cpi': { mode: 'yoy' },
+  'ppi': { mode: 'yoy' },
+  'pce-price-index': { mode: 'yoy' },
+  'm2-money-supply': { mode: 'yoy' },
+  'credit-spreads': { mode: 'spread', a: 'DBAA', b: 'DAAA' },
+  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'UST_DTB3' }
+};
+const MODE_LABEL = {
+  mom: '月增減（千人）',
+  yoy: '年增率',
+  spread: '利差（百分點）',
+  raw: '原值'
+};
+const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA', CBOE: 'Cboe', UST: 'FRED＋美國財政部' };
+// 來源列文字：「來源: 序列代碼」，series 有 lag 時加註延遲（DA-10）
+function sourceText(ids, defOf) {
+  return ids.map(id => {
+    const d = defOf(id);
+    return (SOURCE_LABEL[d.source] || d.source || '來源未標') + ': ' + id + (d.lag ? '（延遲：' + d.lag + '）' : '');
+  }).join('；');
+}
+const TIMING = { L: '領先', C: '同時', G: '落後' };
+
+const seriesCache = new Map();
+function loadSeries(id) {
+  if (!seriesCache.has(id)) {
+    // DA-05 衍生序列（DRV_ 開頭）放 data/derived/，格式同 data/series/
+    const url = (id.startsWith('DRV_') ? 'data/derived/' : 'data/series/') + id + '.json';
+    seriesCache.set(id, fetch(url).then(r => {
+      if (!r.ok) throw new Error(url + ' 讀取失敗（HTTP ' + r.status + '）');
+      return r.json();
+    }).catch(e => { throw new Error(url + '：' + e.message); }));
+  }
+  return seriesCache.get(id);
+}
+
+function validObs(s) {
+  return s.observations.filter(o => o[1] !== null && o[1] !== undefined);
+}
+
+// 找 date 以前（含）最後一筆，obs 已按日期升序
+function lastOnOrBefore(obs, date) {
+  let lo = 0, hi = obs.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (obs[mid][0] <= date) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return ans;
+}
+function yearAgo(date) {
+  const y = parseInt(date.slice(0, 4), 10) - 1;
+  let md = date.slice(5);
+  if (md === '02-29') md = '02-28';
+  return y + '-' + md;
+}
+
+function transform(mode, obsMain, obsB) {
+  if (mode === 'mom') {
+    return obsMain.slice(1).map((o, i) => [o[0], o[1] - obsMain[i][1]]);
+  }
+  if (mode === 'yoy') {
+    const out = [];
+    for (let i = 0; i < obsMain.length; i++) {
+      const t = yearAgo(obsMain[i][0]);
+      if (t < obsMain[0][0]) continue;
+      const j = lastOnOrBefore(obsMain, t);
+      if (j < 0 || obsMain[j][1] === 0) continue;
+      out.push([obsMain[i][0], (obsMain[i][1] / obsMain[j][1] - 1) * 100]);
+    }
+    return out;
+  }
+  if (mode === 'spread') {
+    const m = new Map(obsB);
+    const out = [];
+    for (const [d, v] of obsMain) if (m.has(d)) out.push([d, v - m.get(d)]);
+    return out;
+  }
+  return obsMain;
+}
+
+// 讀序列 → 依 mode 轉換 → 取最後兩點；卡片與綜合訊號共用（讀取失敗會 throw）
+async function loadPoints(ids, mode) {
+  const loaded = await Promise.all(ids.map(loadSeries));
+  const obsMain = validObs(loaded[0]);
+  const obsB = loaded[1] ? validObs(loaded[1]) : null;
+  const pts = transform(mode, obsMain, obsB);
+  return {
+    loaded: loaded,
+    pts: pts,
+    last: pts.length ? pts[pts.length - 1] : null,
+    prev: pts.length > 1 ? pts[pts.length - 2] : null,
+    freq: loaded[0].frequency
+  };
+}
+
+function fmtDate(d, freq) {
+  if (freq === 'monthly') return d.slice(0, 7);
+  if (freq === 'quarterly') {
+    return d.slice(0, 4) + ' Q' + (Math.floor((parseInt(d.slice(5, 7), 10) - 1) / 3) + 1);
+  }
+  if (freq === 'annual') return d.slice(0, 4);
+  return d;
+}
+function fmtNum(v, mode) {
+  const abs = Math.abs(v);
+  let digits = 2;
+  if (mode === 'raw' || mode === 'mom') {
+    if (abs >= 10000) digits = 0;
+    else if (abs >= 1000) digits = 1;
+  }
+  let s = v.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  if (mode === 'yoy') s += '%';
+  return s;
+}
+// 單位換算（UI-12）：百萬美元換成可讀的兆／億美元，回傳 { s: 數字字串, u: 單位 }
+function fmtMoney(v) {
+  const abs = Math.abs(v);
+  const f = x => x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1e6) return { s: f(v / 1e6), u: '兆美元' };
+  if (abs >= 100) return { s: f(v / 100), u: '億美元' };
+  return { s: f(v), u: '百萬美元' };
+}
+// 卡片值與差值的「數字＋單位」；unit 為「%」時值直接接 %、差值接「個百分點」，「指數」不加字，百萬美元走換算
+function fmtWithUnit(v, mode, unit, isDiff) {
+  if (unit === '百萬美元') { const m = fmtMoney(isDiff ? Math.abs(v) : v); return m.s + ' ' + m.u; }
+  let s;
+  if (isDiff) {
+    const dg = (mode === 'mom' || mode === 'raw') && Math.abs(v) >= 1000 ? 0 : 2;
+    s = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: dg, maximumFractionDigits: dg });
+  } else s = fmtNum(v, mode);
+  if (!unit || unit === '指數') return s;
+  if (unit === '%') return isDiff ? s + ' 個百分點' : s + '%';
+  return s + ' ' + unit;
+}
+// 值下方的說明文字：raw 卡依序列單位補註
+function modeLabel(mode, unit) {
+  if (mode !== 'raw') return MODE_LABEL[mode];
+  if (unit === '百萬美元') return '原值（原始單位：百萬美元）';
+  if (unit === '指數') return '原值（指數）';
+  return MODE_LABEL[mode];
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function el(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+function headHtml(ind) {
+  const tag = ind.timing
+    ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>'
+    : '';
+  // 燈號 pill 先放灰「—」，綜合訊號算完後由 setLamp 補上（UI-11）
+  return '<div class="head"><div><div class="name-zh">' + esc(ind.name_zh) + '</div>' +
+    '<div class="name-en">' + esc(ind.name_en) + '</div></div>' +
+    '<span class="head-r">' + tag + '<span class="lamp na" title="燈號判斷中">—</span></span></div>';
+}
+
+function seriesIdsFor(ind) {
+  const rule = DISPLAY_RULES[ind.id];
+  if (rule && rule.mode === 'spread') return [rule.a, rule.b];
+  const main = (ind.series || []).find(s => s.role === 'main');
+  return main ? [main.id] : [];
+}
+
+async function buildCard(ind) {
+  const noSeries = !(ind.series && ind.series.length);
+  if (ind.status === 'unavailable' || noSeries) {
+    const msg = ind.status === 'unavailable' ? '無公開資料' : '無資料';
+    const ext = ind.external && ind.external.name
+      ? '<div class="mode">原始來源：' + esc(ind.external.name) + '</div>' : '';
+    const note = ind.external && ind.external.note
+      ? '<div class="mode">' + esc(ind.external.note) + '</div>' : '';
+    return el('<div class="card pending">' + headHtml(ind) +
+      '<div class="value" style="font-size:1.1rem">' + msg + '</div>' + ext + note +
+      '<div class="meta"><span>' + esc(ind.pages || '') + '</span></div></div>');
+  }
+
+  const ids = seriesIdsFor(ind);
+  if (!ids.length) {
+    return el('<div class="card error">' + headHtml(ind) +
+      '<div class="errmsg">找不到主序列（indicators.json 此指標無 role=main）</div></div>');
+  }
+  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
+  const mode = rule.mode;
+  let data;
+  try {
+    data = await loadPoints(ids, mode);
+  } catch (e) {
+    return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">' + esc(e.message) + '</div></div>');
+  }
+  const { loaded, pts, last, prev } = data;
+  if (pts.length === 0) {
+    return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">序列 ' + esc(ids.join('、')) + ' 無有效資料</div></div>');
+  }
+  const freq = data.freq || ind.frequency;
+
+  // 卡片單位：只有 raw／mom 卡採用主序列的 unit（沒有 unit 時行為同舊版）
+  const cardUnit = (mode === 'raw' || mode === 'mom') ? (((ind.series || []).find(x => x.id === ids[0]) || {}).unit || '') : '';
+  let changeHtml = '<span class="change flat">—</span>';
+  if (prev) {
+    const diff = last[1] - prev[1];
+    const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '■';
+    let txt;
+    if (mode === 'yoy' || mode === 'spread') {
+      txt = fmtWithUnit(diff, mode, '%', true);
+    } else {
+      txt = fmtWithUnit(diff, mode, cardUnit === '千人' ? '' : cardUnit, true);
+      // 原值接近 0 或為負時百分比沒有意義：% 序列不附，其餘只在前後兩期都 > 0 時附
+      if (mode === 'raw' && cardUnit !== '%' && prev[1] > 1e-9 && last[1] > 0) txt += '（' + (Math.abs(diff / prev[1]) * 100).toFixed(2) + '%）';
+    }
+    changeHtml = '<span class="change ' + cls + '" title="與前一期（' + esc(fmtDate(prev[0], freq)) + '）比較">' + arrow + ' ' + txt + '</span>';
+  }
+
+  const defOf = id => (ind.series || []).find(x => x.id === id) || {};
+  const subUsed = loaded.filter(s => s.substitute || defOf(s.id).substitute);
+  const isSub = ind.status === 'substitute' || subUsed.length > 0;
+  const subBadge = isSub
+    ? '<div><span class="badge-sub">替代</span> <span class="mode">替代序列：' +
+      esc((subUsed.length ? subUsed.map(s => s.id) : ids).join('、')) + '</span></div>'
+    : '';
+  const srcText = sourceText(ids, defOf);
+
+  const card = el('<div class="card">' + headHtml(ind) + subBadge +
+    '<div class="value-row"><span class="value">' + esc(fmtWithUnit(last[1], mode, cardUnit, false)) + '</span>' + changeHtml + '</div>' +
+    '<div class="mode">' + esc(modeLabel(mode, cardUnit)) + '</div>' +
+    '<div class="spark"></div>' +
+    '<div class="meta"><span>資料截至 ' + esc(fmtDate(last[0], freq)) + '</span><span>' + esc(ind.pages || '') + '</span></div>' +
+    '<div class="meta"><span>' + esc(srcText) + '</span></div></div>');
+  card._spark = pts;
+  return card;
+}
+
+function drawSpark(card) {
+  const pts = card._spark;
+  if (!pts || !window.echarts) return;
+  const lastDate = pts[pts.length - 1][0];
+  const cut = (parseInt(lastDate.slice(0, 4), 10) - 5) + lastDate.slice(4);
+  let data = pts.filter(p => p[0] >= cut);
+  if (data.length < 2) data = pts.slice(-60);
+  const css = getComputedStyle(document.documentElement);
+  const lineColor = css.getPropertyValue('--accent').trim();
+  const areaColor = css.getPropertyValue('--spark-area').trim();
+  const chart = echarts.init(card.querySelector('.spark'), null, { renderer: 'svg' });
+  chart.setOption({
+    animation: false,
+    grid: { left: 2, right: 2, top: 4, bottom: 4 },
+    xAxis: { type: 'time', show: false },
+    yAxis: { type: 'value', show: false, scale: true },
+    series: [{
+      type: 'line', data: data, showSymbol: false, silent: true,
+      lineStyle: { width: 1.5, color: lineColor },
+      areaStyle: { color: areaColor }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+}
+
+// ---- 綜合訊號（UI-03）：規則在 indicators.json 的 signal 欄位 ----
+const STATE_LABEL = { exp: '擴張', neu: '中性', con: '收縮', na: '不計' };
+
+// date 往前推 n 個月（日不變；只拿來做字串比較，不需是合法日期）
+function monthsBefore(date, n) {
+  let y = parseInt(date.slice(0, 4), 10);
+  let m = parseInt(date.slice(5, 7), 10) - n;
+  while (m < 1) { m += 12; y -= 1; }
+  return y + '-' + String(m).padStart(2, '0') + date.slice(7);
+}
+// pts 中日期 > cut 的平均值；沒有資料回 null
+function meanAfter(pts, cut) {
+  let sum = 0, n = 0;
+  for (const p of pts) if (p[0] > cut) { sum += p[1]; n++; }
+  return n ? sum / n : null;
+}
+
+// 回傳 { state: 'exp'|'neu'|'con'|'na', text }；不會 throw
+async function evalSignal(ind) {
+  const sg = ind.signal;
+  if (!sg) return { state: 'na', text: ind.status === 'unavailable' ? '無公開資料' : '不列入判斷' };
+  const ids = sg.minus ? [sg.series, sg.minus] : [sg.series];
+  const mode = sg.basis === 'yoy' ? 'yoy' : sg.minus ? 'spread' : 'raw';
+  let data;
+  try {
+    data = await loadPoints(ids, mode);
+  } catch (e) {
+    return { state: 'na', text: '資料讀取失敗：' + e.message };
+  }
+  const { pts, last } = data;
+  if (!last) return { state: 'na', text: '序列 ' + ids.join('、') + ' 無有效資料' };
+  const asOf = '（' + fmtDate(last[0], data.freq || ind.frequency) + '）';
+  const below = sg.expansionWhen === 'below';
+  // v 落在擴張那一側為 exp、另一側為 con；剛好等於門檻時用 atThreshold（預設中性）
+  const side = (v, t) => v === t ? (sg.atThreshold || 'neu') : ((v < t) === below ? 'exp' : 'con');
+  const sym = (v, t) => v > t ? '>' : v < t ? '<' : '=';
+  const f = v => fmtNum(v, mode);
+
+  if (sg.basis === 'raw' || sg.basis === 'yoy') {
+    const v = last[1];
+    const pre = sg.basis === 'yoy' ? 'YoY ' : '';
+    if (sg.neutralBand) {
+      const [lo, hi] = sg.neutralBand;
+      if (v >= lo && v <= hi) return { state: 'neu', text: lo + ' ≤ ' + pre + f(v) + ' ≤ ' + hi + asOf };
+      const t = v < lo ? lo : hi;
+      return { state: side(v, t), text: pre + f(v) + ' ' + sym(v, t) + ' ' + t + asOf };
+    }
+    const t = sg.threshold;
+    return { state: side(v, t), text: pre + f(v) + ' ' + sym(v, t) + ' ' + t + asOf };
+  }
+  if (sg.basis === 'trend') {
+    // 視窗以最新一筆的日期往回算，月／週／日資料都適用
+    const [sm, lm] = sg.window || [3, 12];
+    const longCut = monthsBefore(last[0], lm);
+    if (pts[0][0] > longCut) return { state: 'na', text: '資料不足 ' + lm + ' 個月' };
+    const s = meanAfter(pts, monthsBefore(last[0], sm));
+    const l = meanAfter(pts, longCut);
+    return { state: side(s, l), text: '近 ' + sm + ' 月均 ' + f(s) + ' ' + sym(s, l) + ' 近 ' + lm + ' 月均 ' + f(l) + asOf };
+  }
+  return { state: 'na', text: '未知的判斷方式 ' + sg.basis };
+}
+
+function isSubstituteSignal(ind) {
+  if (ind.status === 'substitute') return true;
+  const sg = ind.signal;
+  if (!sg) return false;
+  const ids = sg.minus ? [sg.series, sg.minus] : [sg.series];
+  return (ind.series || []).some(s => ids.includes(s.id) && s.substitute);
+}
+
+// ---- 燈號（UI-11）：G 綠＝沒問題、Y 黃＝警告再觀察、R 紅＝危險、na＝未判（畫面「—」） ----
+const LIGHT_LABEL = { G: '沒問題', Y: '觀察', R: '危險', na: '未判' };
+const LIGHT_TEXT = { G: 'G', Y: 'Y', R: 'R', na: '—' };
+// 由綜合訊號推燈號：門檻型（raw／yoy）收縮即越過講義門檻 → R；趨勢型（trend）講義無危險門檻，非擴張一律 Y
+const LIGHT_FROM_SIGNAL = {
+  threshold: { exp: 'G', neu: 'Y', con: 'R' },
+  trend: { exp: 'G', neu: 'Y', con: 'Y' }
+};
+// indicators.json light.rules[].when：最新值 v 對門檻 t
+const LIGHT_WHEN = {
+  above: (v, t) => v > t,
+  atOrAbove: (v, t) => v >= t,
+  below: (v, t) => v < t,
+  atOrBelow: (v, t) => v <= t
+};
+const LIGHT_SYM = { above: '>', atOrAbove: '≥', below: '<', atOrBelow: '≤' };
+
+// 回傳 { light: 'G'|'Y'|'R'|'na', text, note }；不會 throw。
+// 指標有 light 欄位以它為準（序列可為 DRV_ 衍生值）；否則由 evalSignal 的結果 sig 推得。
+async function evalLight(ind, sig) {
+  const lt = ind.light;
+  if (lt) {
+    const note = lt.note || '';
+    let data;
+    try {
+      data = await loadPoints([lt.series], 'raw');
+    } catch (e) {
+      return { light: 'na', text: '資料讀取失敗：' + e.message, note: note };
+    }
+    const last = data.last;
+    if (!last) return { light: 'na', text: '序列 ' + lt.series + ' 無有效資料', note: note };
+    const v = last[1];
+    const unit = data.loaded[0].units === '%' ? '%' : '';
+    const hit = (lt.rules || []).find(r => LIGHT_WHEN[r.when] && LIGHT_WHEN[r.when](v, r.value));
+    const light = hit ? hit.light : (lt.else || 'na');
+    const ruleText = (lt.rules || []).map(r => (LIGHT_SYM[r.when] || r.when) + ' ' + r.value + ' → ' + r.light)
+      .concat(lt.else ? ['其餘 → ' + lt.else] : []).join('；');
+    return {
+      light: light,
+      text: lt.series + ' ' + fmtNum(v, 'raw') + unit + '（' + fmtDate(last[0], data.freq || ind.frequency) + '）；規則：' + ruleText,
+      note: note
+    };
+  }
+  if (!ind.signal) {
+    return { light: 'na', text: ind.status === 'unavailable' ? '無公開資料' : '講義無明確門檻，不判燈號', note: '' };
+  }
+  if (sig.state === 'na') return { light: 'na', text: sig.text, note: ind.signal.note || '' };
+  const map = ind.signal.basis === 'trend' ? LIGHT_FROM_SIGNAL.trend : LIGHT_FROM_SIGNAL.threshold;
+  return {
+    light: map[sig.state] || 'na',
+    text: '綜合訊號「' + STATE_LABEL[sig.state] + '」：' + sig.text,
+    note: ind.signal.note || ''
+  };
+}
+
+function lampTitle(lt) {
+  return '燈號 ' + LIGHT_TEXT[lt.light] + '（' + LIGHT_LABEL[lt.light] + '）：' + lt.text + (lt.note ? '｜' + lt.note : '');
+}
+function lampHtml(lt) {
+  return '<span class="lamp ' + lt.light + '" title="' + esc(lampTitle(lt)) + '">' + LIGHT_TEXT[lt.light] + '</span>';
+}
+// 卡片標題列的燈號 pill：headHtml 先放灰「—」，算完後換成實際燈號
+function setLamp(card, lt) {
+  const old = card.querySelector('.head .lamp');
+  if (old) old.replaceWith(el(lampHtml(lt)));
+}
+
+function summarySection() {
+  return el('<section class="cat" id="signal-summary"><h2>綜合訊號總覽<span class="en">Signal Summary</span></h2>' +
+    '<p class="sig-lead">單一指標容易誤判；越多指標指向同一方向，訊號越可信 [K 4]。下表依各指標的簡化規則（門檻、年增率或近 3 月對近 12 月均值）判斷目前偏擴張或偏收縮；通膨、利率等方向不單純的指標不計。點燈號可跳到該指標卡片。</p>' +
+    '<div class="sig-verdict">計算中…</div><div class="sig-lamps"></div><div class="sig-wrap"></div><div class="sig-grid"></div></section>');
+}
+
+function fillSummary(sec, inds, sigs, lights) {
+  const states = ['G', 'Y', 'R', 'na'];
+  const rows = ['L', 'C', 'G'];
+  if (inds.some(i => !TIMING[i.timing])) rows.push('-');
+  const cnt = {};
+  for (const r of rows.concat('all')) cnt[r] = { G: 0, Y: 0, R: 0, na: 0, exp: 0, neu: 0, con: 0, sna: 0 };
+  inds.forEach((ind, k) => {
+    const r = TIMING[ind.timing] ? ind.timing : '-';
+    const lg = lights[k].light;
+    cnt[r][lg]++;
+    cnt.all[lg]++;
+    cnt.all[sigs[k].state === 'na' ? 'sna' : sigs[k].state]++;
+  });
+
+  const head = '<tr><th>時序</th>' + states.map(s => '<th class="' + s + '">' + LIGHT_LABEL[s] + '</th>').join('') + '<th>小計</th></tr>';
+  const rowHtml = (r, label, cls) => {
+    const c = cnt[r];
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td>' +
+      states.map(s => '<td>' + c[s] + '</td>').join('') + '<td>' + (c.G + c.Y + c.R + c.na) + '</td></tr>';
+  };
+  sec.querySelector('.sig-wrap').innerHTML = '<table class="sig-table">' + head +
+    rows.map(r => rowHtml(r, r === '-' ? '未標' : TIMING[r])).join('') + rowHtml('all', '合計', 'total') + '</table>';
+
+  const a = cnt.all;
+  const counted = a.exp + a.neu + a.con;
+  const dir = a.exp > a.con ? 'exp' : a.con > a.exp ? 'con' : 'neu';
+  const dirText = dir === 'exp' ? '目前多數指標偏擴張' : dir === 'con' ? '目前多數指標偏收縮' : '擴張與收縮指標數相同，方向不明';
+  const v = sec.querySelector('.sig-verdict');
+  v.className = 'sig-verdict ' + dir;
+  v.textContent = '列入判斷 ' + counted + ' 項：擴張 ' + a.exp + '、中性 ' + a.neu + '、收縮 ' + a.con + ' → ' + dirText + '（不計 ' + a.sna + ' 項）';
+
+  // 燈號匯總（UI-11）：全部指標都算，未判＝講義無門檻或資料不足
+  const lc = { G: 0, Y: 0, R: 0, na: 0 };
+  lights.forEach(lt => { lc[lt.light] = (lc[lt.light] || 0) + 1; });
+  sec.querySelector('.sig-lamps').innerHTML = '燈號（G 沒問題／Y 觀察／R 危險）：' +
+    '<b class="G">G ' + lc.G + '</b>／<b class="Y">Y ' + lc.Y + '</b>／<b class="R">R ' + lc.R + '</b>／未判 ' + lc.na;
+
+  const grid = sec.querySelector('.sig-grid');
+  inds.forEach((ind, k) => {
+    const sg = sigs[k];
+    const lt = lights[k];
+    const tag = ind.timing ? '<span class="tag">' + TIMING[ind.timing] + '</span>' : '';
+    const sub = isSubstituteSignal(ind) ? '<span class="badge-sub">替代</span>' : '';
+    const note = ind.signal && ind.signal.note ? ind.signal.note : '';
+    grid.appendChild(el('<a class="light ' + lt.light + '" href="#ind-' + esc(ind.id) + '" title="' + esc(note) + '">' +
+      '<div class="lhead">' + lampHtml(lt) + '<span class="lname">' + esc(ind.name_zh) + '</span>' + tag + sub +
+      '<span class="lstate ' + lt.light + '">' + LIGHT_LABEL[lt.light] + '</span></div>' +
+      '<div class="lwhy">' + esc(sg.text) + '</div></a>'));
+  });
+}
+
+// ---- 指標詳細圖（UI-02）：原值＋3 月均＋12 月均＋NBER 衰退陰影，下方 YoY 圖 ----
+let recessionId = 'USREC';
+const detail = { charts: [], token: 0, onResize: null };
+
+// 按日期視窗的移動平均：取日期落在 (d − n 個月, d] 的觀測平均；雙指標 O(n)，月／週／日資料都適用。
+// 視窗未滿（資料起點晚於 d − n 個月）的點不輸出。
+function rollingMean(pts, months) {
+  const out = [];
+  let j = 0, sum = 0;
+  for (let i = 0; i < pts.length; i++) {
+    sum += pts[i][1];
+    const cut = monthsBefore(pts[i][0], months);
+    while (pts[j][0] <= cut) { sum -= pts[j][1]; j++; }
+    if (pts[0][0] <= cut) out.push([pts[i][0], sum / (i - j + 1)]);
+  }
+  return out;
+}
+
+// USREC 連續為 1 的區段 → markArea 區間；結束點取下一筆（0）的日期，讓陰影蓋滿最後一個月
+function recessionBands(obs) {
+  const bands = [];
+  let start = null;
+  for (let i = 0; i < obs.length; i++) {
+    const on = obs[i][1] === 1;
+    if (on && start === null) start = obs[i][0];
+    if (!on && start !== null) { bands.push([start, obs[i][0]]); start = null; }
+  }
+  if (start !== null) bands.push([start, obs[obs.length - 1][0]]);
+  return bands;
+}
+
+function axisNum(v) {
+  return Math.abs(v) >= 10000
+    ? new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+    : String(Math.round(v * 100) / 100);
+}
+
+function closeDetail() {
+  const dlg = document.getElementById('detail');
+  if (dlg.open) dlg.close();
+}
+function disposeDetail() {
+  detail.token++;
+  if (detail.onResize) window.removeEventListener('resize', detail.onResize);
+  detail.onResize = null;
+  detail.charts.forEach(c => c.dispose());
+  detail.charts = [];
+  if (window.echarts) echarts.disconnect('detail');
+  const dlg = document.getElementById('detail');
+  dlg.querySelector('.dbody').innerHTML = '';
+}
+
+// 決定詳細圖要畫哪些序列：spread 指標畫利差；有 axis:"left" 的序列就以它為主畫序列，否則用 main；axis:"right" 畫右軸
+function detailPlan(ind) {
+  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
+  const list = ind.series || [];
+  if (rule.mode === 'spread') {
+    return { spread: true, ids: [rule.a, rule.b], left: null, right: null };
+  }
+  const left = list.find(s => s.axis === 'left') || list.find(s => s.role === 'main');
+  const right = list.find(s => s.axis === 'right') || null;
+  return { spread: false, ids: right ? [left.id, right.id] : [left.id], left: left, right: right };
+}
+
+// ---- 指標細項說明（UI-15）：指標內容／資料來源／判斷標準，資料取自 indicators.json ----
+const ROLE_LABEL = { main: '主序列', compare: '對照', component: '計算成分' };
+
+// 把 signal 欄位寫成一句白話（與 evalSignal 的判斷方式一致）
+function signalSentence(sg) {
+  const target = sg.series + (sg.minus ? ' − ' + sg.minus : '');
+  const below = sg.expansionWhen === 'below';
+  const atLabel = STATE_LABEL[sg.atThreshold || 'neu'];
+  if (sg.basis === 'trend') {
+    const [sm, lm] = sg.window || [3, 12];
+    return '以 ' + target + ' 近 ' + sm + ' 個月均值對近 ' + lm + ' 個月均值比較：短期均值' +
+      (below ? '低於' : '高於') + '長期均值為擴張，' + (below ? '高於' : '低於') + '為收縮，相等為' + atLabel + '。';
+  }
+  if (sg.basis === 'raw' || sg.basis === 'yoy') {
+    const what = sg.basis === 'yoy' ? target + ' 年增率' : target;
+    const unit = sg.basis === 'yoy' ? '%' : '';
+    if (sg.neutralBand) {
+      const [lo, hi] = sg.neutralBand;
+      return '看 ' + what + ' 最新值：介於 ' + lo + unit + '–' + hi + unit + '（含）為中性，' +
+        (below ? '低於 ' + lo + unit : '高於 ' + hi + unit) + ' 為擴張，' +
+        (below ? '高於 ' + hi + unit : '低於 ' + lo + unit) + ' 為收縮。';
+    }
+    const t = sg.threshold + unit;
+    return '看 ' + what + ' 最新值：' + (below ? '低於 ' : '高於 ') + t + ' 為擴張，' +
+      (below ? '高於 ' : '低於 ') + t + ' 為收縮，剛好等於 ' + t + ' 為' + atLabel + '。';
+  }
+  return '判斷方式：' + sg.basis + '。';
+}
+
+function detailInfoHtml(ind) {
+  const desc = '<section><h3>指標內容</h3><p>' + esc(ind.description || '—') + '</p></section>';
+
+  const list = ind.series || [];
+  let src = list.length
+    ? '<ul>' + list.map(s => '<li>' + esc(s.id) + '｜' + esc(SOURCE_LABEL[s.source] || s.source || '來源未標') + '｜' +
+        esc(ROLE_LABEL[s.role] || s.role || '') + (s.substitute ? ' <span class="badge-sub">替代</span>' : '') +
+        (s.note ? '<div class="note">' + esc(s.note) + '</div>' : '') +
+        (s.lag ? '<div class="note">延遲：' + esc(s.lag) + '</div>' : '') + '</li>').join('') + '</ul>'
+    : '<p>無可用序列</p>';
+  if (ind.external) {
+    src += '<p>原始來源：' + esc(ind.external.name) + (ind.external.note ? '（' + esc(ind.external.note) + '）' : '') + '</p>';
+  }
+  if (ind.derived_series && ind.derived_series.length) {
+    src += '<p class="note">衍生序列（本站自行計算）：' + esc(ind.derived_series.join('、')) + '</p>';
+  }
+  const source = '<section><h3>資料來源</h3>' + src + '</section>';
+
+  let rule = ind.rule ? '<p>' + esc(ind.rule) + '</p>' : '';
+  const th = ind.thresholds || [];
+  if (th.length) {
+    rule += '<ul>' + th.map(t => '<li>' + esc(t.value) + '：' + esc(t.label) +
+      (t.on === 'yoy' ? '（YoY）' : '') + (t.series ? '（' + esc(t.series) + '）' : '') + '</li>').join('') + '</ul>';
+  }
+  if (ind.signal) {
+    rule += '<p>綜合訊號：' + esc(signalSentence(ind.signal)) + '</p>';
+    if (ind.signal.note) rule += '<p class="note">' + esc(ind.signal.note) + '</p>';
+  }
+  const judge = '<section><h3>判斷標準</h3>' + (rule || '<p>—</p>') + '</section>';
+
+  return '<div class="dinfo">' + desc + source + judge + '</div>';
+}
+
+async function openDetail(ind) {
+  const dlg = document.getElementById('detail');
+  disposeDetail();
+  const token = detail.token;
+  const plan = detailPlan(ind);
+  const defOf = id => (ind.series || []).find(x => x.id === id) || {};
+  const isSub = ind.status === 'substitute' || plan.ids.some(id => defOf(id).substitute);
+  const srcText = sourceText(plan.ids, defOf);
+  const tag = ind.timing ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>' : '';
+  dlg.querySelector('.dhead').innerHTML =
+    '<h2 class="dtitle" id="detail-title">' + esc(ind.name_zh) + '<span class="en">' + esc(ind.name_en) + '</span></h2>' +
+    '<div class="dmeta">' + tag + (isSub ? '<span class="badge-sub">替代</span>' : '') +
+    '<span>序列：' + esc(plan.ids.join('、')) + '</span><span>來源：' + esc(srcText) + '</span>' +
+    '<span class="dasof">資料截至 …</span>' + (ind.pages ? '<span>講義 [' + esc(ind.pages) + ']</span>' : '') + '</div>';
+  // 圖表放 .dcharts、說明放 .dinfo（UI-15）：圖表載入失敗只覆寫 .dcharts，說明照常顯示
+  dlg.querySelector('.dbody').innerHTML = '<div class="dcharts"><p class="mode">載入中…</p></div>' + detailInfoHtml(ind);
+  const body = dlg.querySelector('.dcharts');
+  if (!dlg.open) dlg.showModal();
+
+  let raw, rightPts = null, recObs = [];
+  try {
+    if (plan.spread) {
+      raw = (await loadPoints(plan.ids, 'spread')).pts;
+    } else {
+      const loaded = await Promise.all(plan.ids.map(loadSeries));
+      raw = validObs(loaded[0]);
+      if (loaded[1]) rightPts = validObs(loaded[1]);
+    }
+    try { recObs = validObs(await loadSeries(recessionId)); } catch (e) { recObs = []; }
+  } catch (e) {
+    if (token === detail.token) body.innerHTML = '<p class="errmsg">' + esc(e.message) + '</p>';
+    return;
+  }
+  if (token !== detail.token) return;  // 載入期間已關閉或換了指標
+  if (!raw.length) {
+    body.innerHTML = '<p class="errmsg">序列 ' + esc(plan.ids.join('、')) + ' 無有效資料</p>';
+    return;
+  }
+  drawDetail(ind, plan, raw, rightPts, recObs, body, dlg);
+}
+
+function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
+  const derived = ind.derived || [];
+  const hasYoy = derived.includes('yoy');
+  const freq = ind.frequency;
+  const lastDate = raw[raw.length - 1][0];
+  dlg.querySelector('.dasof').textContent = '資料截至 ' + fmtDate(lastDate, freq);
+
+  const css = getComputedStyle(document.documentElement);
+  const cv = n => css.getPropertyValue(n).trim();
+  const C = {
+    raw: cv('--accent'), qma: cv('--sub'), yma: cv('--sig-up'), right: cv('--danger'),
+    text: cv('--text'), muted: cv('--muted'), border: cv('--border'),
+    shade: 'rgba(' + cv('--banner-shade') + ', 0.12)'
+  };
+  const label = s => s.id + (s.note ? ' ' + s.note : '');
+  const leftName = plan.spread ? '原值（' + plan.ids.join(' − ') + '）' : '原值 ' + plan.left.id;
+  // 序列單位（UI-12）：只加在文字上（caption、Y 軸名稱、tooltip），不影響計算與縮放
+  const leftUnit = plan.spread ? '百分點' : (plan.left.unit || '');
+  const rightUnit = plan.right ? (plan.right.unit || '') : '';
+  const unitTxt = u => u ? '（單位：' + u + '）' : '';
+  const caption = plan.spread
+    ? '利差 ' + plan.ids.join(' − ') + '（百分點）'
+    : (plan.right ? '左軸 ' + label(plan.left) + unitTxt(leftUnit) + '；右軸 ' + label(plan.right) + unitTxt(rightUnit) : label(plan.left) + unitTxt(leftUnit));
+  const tipFmt = u => v => v == null ? '—' : fmtNum(v, 'raw') + (u && u !== '指數' ? (u === '%' ? '%' : ' ' + u) : '');
+
+  // 兩張圖用相同的 x 範圍，dataZoom 連動才會對齊
+  let xMin = raw[0][0];
+  if (rightPts && rightPts.length && rightPts[0][0] < xMin) xMin = rightPts[0][0];
+  const xRange = { min: Date.parse(xMin), max: Date.parse(lastDate) };
+  const zoomStart = Date.parse(monthsBefore(lastDate, 240));
+  const bands = recessionBands(recObs).map(b => [{ xAxis: b[0] }, { xAxis: b[1] }]);
+  const recArea = { silent: true, itemStyle: { color: C.shade }, data: bands };
+  const markLines = list => list.length ? {
+    silent: true, symbol: 'none',
+    lineStyle: { type: 'dashed', color: C.muted, width: 1 },
+    label: { formatter: p => p.data.name, position: 'insideEndTop', color: C.muted, fontSize: 11 },
+    data: list.map(t => Object.assign({ yAxis: t.value, name: t.label }, t.pos ? { label: { position: t.pos } } : {}))
+  } : undefined;
+  const line = (name, data, color, extra) => Object.assign({
+    type: 'line', name: name, data: data, showSymbol: false, sampling: 'lttb',
+    lineStyle: { width: 1.5, color: color }, itemStyle: { color: color }
+  }, extra || {});
+  const baseOption = (withSlider) => ({
+    animation: false,
+    textStyle: { color: C.text },
+    tooltip: { trigger: 'axis', confine: true },
+    legend: { top: 0, textStyle: { color: C.text } },
+    grid: { left: 56, right: plan.right ? 60 : 24, top: 44, bottom: withSlider ? 64 : 28 },
+    xAxis: { type: 'time', min: xRange.min, max: xRange.max, axisLabel: { color: C.muted, hideOverlap: true }, axisLine: { lineStyle: { color: C.border } } },
+    dataZoom: [{ type: 'inside', startValue: zoomStart, endValue: xRange.max }]
+      .concat(withSlider ? [{ type: 'slider', startValue: zoomStart, endValue: xRange.max, bottom: 8, height: 22, labelFormatter: v => echarts.time.format(v, '{yyyy}-{MM}', false) }] : [])
+  });
+  const yAxis = (pos, extra) => Object.assign({
+    type: 'value', scale: true, position: pos,
+    axisLabel: { color: C.muted, formatter: axisNum },
+    splitLine: { lineStyle: { color: C.border, opacity: .6 } }
+  }, extra || {});
+
+  // 門檻若帶 series，只在該序列是主圖（plan.left）時才畫；沒有 series 的照常畫
+  const primaryId = plan.left ? plan.left.id : null;
+  const thOk = t => !t.series || t.series === primaryId;
+
+  // 上圖：原值（＋右軸對照）＋ QMA ＋ YMA
+  const rawTh = (ind.thresholds || []).filter(t => t.on !== 'yoy' && thOk(t));
+  const top = [line(leftName + (plan.right ? '（左軸）' : ''), raw, C.raw, {
+    markArea: recArea, markLine: markLines(rawTh), z: 3
+  })];
+  if (derived.includes('qma')) top.push(line('3 月均 (QMA)', rollingMean(raw, 3), C.qma));
+  if (derived.includes('yma')) top.push(line('12 月均 (YMA)', rollingMean(raw, 12), C.yma));
+  if (plan.right && rightPts) top.push(line('原值 ' + plan.right.id + '（右軸）', rightPts, C.right, { yAxisIndex: 1, tooltip: { valueFormatter: tipFmt(rightUnit) } }));
+  const axisName = (u, al) => u ? { name: u, nameTextStyle: { color: C.muted, align: al } } : {};
+  const topY = [yAxis('left', axisName(leftUnit, 'left'))];
+  if (plan.right) topY.push(yAxis('right', Object.assign({ splitLine: { show: false } }, axisName(rightUnit, 'right'))));
+
+  let html = '<p class="dcap">' + esc(caption) + '・灰色區塊為 NBER 衰退期（' + esc(recessionId) + '）</p><div class="dchart top"></div>';
+  if (hasYoy) html += '<p class="dcap">年增率 YoY（%）</p><div class="dchart yoy"></div>';
+  body.innerHTML = html;
+
+  const topChart = echarts.init(body.querySelector('.dchart.top'));
+  topChart.setOption(Object.assign(baseOption(!hasYoy), {
+    yAxis: topY,
+    series: top,
+    tooltip: { trigger: 'axis', confine: true, valueFormatter: tipFmt(leftUnit) }
+  }));
+  detail.charts.push(topChart);
+
+  if (hasYoy) {
+    const yoyTh = (ind.thresholds || []).filter(t => t.on === 'yoy' && thOk(t));
+    if (!yoyTh.some(t => t.value === 0)) yoyTh.push({ value: 0, label: 'YoY 0', pos: 'insideStartBottom' });  // 標籤放左側，避免與其他門檻標籤重疊
+    const yoyName = plan.right ? 'YoY ' + plan.left.id : 'YoY';
+    const ys = [line(yoyName, transform('yoy', raw), C.raw, { markArea: recArea, markLine: markLines(yoyTh) })];
+    if (plan.right && rightPts) ys.push(line('YoY ' + plan.right.id, transform('yoy', rightPts), C.right));
+    const yoyChart = echarts.init(body.querySelector('.dchart.yoy'));
+    yoyChart.setOption(Object.assign(baseOption(true), {
+      yAxis: [yAxis('left', { axisLabel: { color: C.muted, formatter: v => axisNum(v) + '%' } })],
+      series: ys,
+      tooltip: { trigger: 'axis', confine: true, valueFormatter: v => v == null ? '—' : v.toFixed(2) + '%' }
+    }));
+    detail.charts.push(yoyChart);
+  }
+
+  detail.charts.forEach(c => { c.group = 'detail'; });
+  if (detail.charts.length > 1) echarts.connect('detail');
+  detail.onResize = () => detail.charts.forEach(c => c.resize());
+  window.addEventListener('resize', detail.onResize);
+}
+
+function makeClickable(card, ind) {
+  card.classList.add('clickable');
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', ind.name_zh + ' ' + ind.name_en + '：開啟詳細圖');
+  card.title = '點擊開啟詳細圖';
+  card.addEventListener('click', () => openDetail(ind));
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(ind); }
+  });
+}
+
+function initDetailDialog() {
+  const dlg = document.getElementById('detail');
+  dlg.querySelector('.dclose').addEventListener('click', closeDetail);
+  dlg.addEventListener('close', disposeDetail);  // Esc 或關閉鈕都會觸發
+}
+
+async function main() {
+  const app = document.getElementById('app');
+  let cat;
+  try {
+    const r = await fetch('data/indicators.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    cat = await r.json();
+  } catch (e) {
+    app.innerHTML = '<div class="fatal"><strong>無法讀取 data/indicators.json</strong>（' + esc(e.message) +
+      '）。<br>本頁需透過 HTTP 伺服器開啟，直接用 file:// 開啟會被瀏覽器擋下 fetch。可在專案目錄執行 <code>python3 -m http.server</code> 後瀏覽 http://localhost:8000/。</div>';
+    return;
+  }
+
+  if (cat.recession && cat.recession.series) recessionId = cat.recession.series;
+  initDetailDialog();
+  const wanted = new URLSearchParams(location.search).get('detail');  // ?detail=<指標 id> 載入即開詳細圖
+  const wantedInd = wanted ? cat.indicators.find(i => i.id === wanted) : null;
+  if (wantedInd) openDetail(wantedInd);
+
+  app.innerHTML = '';
+  const summary = summarySection();
+  app.appendChild(summary);
+  const sigJob = Promise.all(cat.indicators.map(evalSignal));
+  // 燈號沿用綜合訊號結果，不重複判斷；序列走 seriesCache，不重複下載
+  const lightJob = sigJob.then(sigs => Promise.all(cat.indicators.map((ind, k) => evalLight(ind, sigs[k]))));
+  const jobs = [];
+  for (const c of cat.categories) {
+    const inds = cat.indicators.filter(i => i.category === c.id);
+    const sec = el('<section class="cat" id="cat-' + esc(c.id) + '"><h2>' + esc(c.id) + '　' + esc(c.name_zh) +
+      '<span class="en">' + esc(c.name_en) + '</span><span class="count">' + inds.length + ' 項指標</span></h2><div class="grid"></div></section>');
+    const grid = sec.querySelector('.grid');
+    app.appendChild(sec);
+    for (const ind of inds) {
+      const slot = el('<div class="card"><div class="name-zh">' + esc(ind.name_zh) + '</div><div class="mode">載入中…</div></div>');
+      slot.id = 'ind-' + ind.id;
+      grid.appendChild(slot);
+      jobs.push(buildCard(ind).then(card => {
+        card.id = 'ind-' + ind.id;  // 綜合訊號燈號的跳轉目標
+        grid.replaceChild(card, slot);
+        drawSpark(card);
+        if (card._spark) makeClickable(card, ind);
+        return lightJob.then(lights => setLamp(card, lights[cat.indicators.indexOf(ind)]));
+      }));
+    }
+  }
+  await Promise.all(jobs);
+  fillSummary(summary, cat.indicators, await sigJob, await lightJob);
+}
+main();
+</script>
+</body>
+</html>
