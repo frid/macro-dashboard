@@ -50,7 +50,7 @@
       ],
       "derived": ["yoy"],
       "thresholds": [
-        { "value": 0, "label": "YoY 0 線" }
+        { "value": 0, "label": "YoY 0 線", "on": "yoy" }
       ],
       "rule": "數字波動大，單月起落意義有限，要看一段時間的趨勢方向。",
       "pages": "K 11–15",
@@ -69,7 +69,7 @@
       "release": "每月第一個週五（就業報告）",
       "series": [
         { "id": "U6RATE", "source": "FRED", "role": "main", "substitute": false },
-        { "id": "LNS12032194", "source": "FRED", "role": "compare", "substitute": false, "note": "因經濟因素兼職人數，講義雙軸對照" }
+        { "id": "LNS12032194", "source": "FRED", "role": "compare", "substitute": false, "note": "因經濟因素兼職人數，講義雙軸對照", "axis": "right" }
       ],
       "derived": null,
       "thresholds": [],
@@ -90,7 +90,7 @@
       "release": "每週四",
       "series": [
         { "id": "ICSA", "source": "FRED", "role": "main", "substitute": false, "note": "初領" },
-        { "id": "CCSA", "source": "FRED", "role": "compare", "substitute": false, "note": "續領" }
+        { "id": "CCSA", "source": "FRED", "role": "compare", "substitute": false, "note": "續領", "axis": "right" }
       ],
       "derived": null,
       "thresholds": [],
@@ -117,7 +117,7 @@
       "derived": ["mom_change", "yoy"],
       "derived_series": ["DRV_PAYEMS_MOM", "DRV_PAYEMS_YOY"],
       "thresholds": [
-        { "value": 0, "label": "YoY 0 線" }
+        { "value": 0, "label": "YoY 0 線", "on": "yoy" }
       ],
       "rule": "就業增加帶動生產與所得，進而推升消費；年增率跌破 0 歷來都與衰退同時出現。",
       "pages": "K 23–26",
@@ -204,7 +204,7 @@
       "series": [
         { "id": "DGORDER", "source": "FRED", "role": "main", "substitute": false },
         { "id": "NEWORDER", "source": "FRED", "role": "compare", "substitute": false, "note": "核心資本財（非國防、不含飛機）" },
-        { "id": "ACDGNO", "source": "FRED", "role": "compare", "substitute": false, "note": "消費性耐久財新訂單，講義雙軸對照" },
+        { "id": "ACDGNO", "source": "FRED", "role": "compare", "substitute": false, "note": "消費性耐久財新訂單，講義雙軸對照", "axis": "right" },
         { "id": "PCEDG", "source": "FRED", "role": "compare", "substitute": false, "note": "PCE 耐久財，講義圖用" }
       ],
       "derived": ["yoy"],
@@ -316,7 +316,7 @@
       "derived": ["ratio_gdp"],
       "derived_series": ["DRV_DEFICIT_GDP"],
       "thresholds": [
-        { "value": -3, "label": "赤字占 GDP 3%（FYFSGDA188S = −3）" }
+        { "value": -3, "label": "赤字占 GDP 3%（FYFSGDA188S = −3）", "series": "FYFSGDA188S" }
       ],
       "rule": "重點看赤字占 GDP 的比率而非金額；超過 3% 被視為財政壓力的關鍵線。",
       "pages": "K 67–68",
@@ -336,8 +336,8 @@
       "series": [
         { "id": "GFDEBTN", "source": "FRED", "role": "main", "substitute": false, "note": "聯邦總債務" },
         { "id": "HMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "住宅房貸" },
-        { "id": "MABSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "總房貸" },
-        { "id": "CMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "商業房貸" },
+        { "id": "MABSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "總房貸", "axis": "left" },
+        { "id": "CMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "商業房貸", "axis": "right" },
         { "id": "SLOASM", "source": "FRED", "role": "compare", "substitute": false, "note": "學生貸款" },
         { "id": "REVOLSL", "source": "FRED", "role": "compare", "substitute": false, "note": "循環信用（月）" },
         { "id": "MVLOASM", "source": "FRED", "role": "compare", "substitute": false, "note": "汽車貸款" },
@@ -345,7 +345,7 @@
       ],
       "derived": ["yoy", "ratio_gdp"],
       "thresholds": [
-        { "value": 3, "label": "債務 YoY 3%" }
+        { "value": 3, "label": "債務 YoY 3%", "on": "yoy" }
       ],
       "rule": "各類債務看水準、年增率、占 GDP 比及其年增率四個角度；每次衰退後債務累積的斜率都明顯變陡。",
       "pages": "K 69–91",

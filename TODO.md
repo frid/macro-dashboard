@@ -19,9 +19,11 @@
   - VIX：主序列改 Yahoo `^VIX`，FRED `VIXCLS` 留作對照
   - 其他 FRED 日資料也改用即時來源：`DFF`／`DFEDTARU`／`DFEDTARL`（聯邦基金利率）、`DGS10`、`SOFR`、`T10Y3M`／`T10Y2Y`（期限利差）、`DBAA`／`DAAA`、`BAMLC0A4CBBB`（信用利差）、`DTB3`、`T10YIE`（損益兩平通膨）、`DTWEXBGS`；逐一找可用來源，找不到即時來源的維持 FRED 並在畫面註明延遲
   - 換來源後的序列與 FRED 原序列做一致性比對（同 DA-04 做法）；用 Yahoo 等非官方來源時依 CLAUDE.md 註明
+- [ ] DA-11 加上FED Watch 來源顯示
+- [ ] DA-12 Philly Fed 未來指數：抓 `GAFDFSA066MSFRBPHI`（Future General Activity），加進 `philly-fed` 當雙軸對照（現況 vs 未來）[K 124]；UI-02 雙軸已就緒，資料到位後補 `axis: "right"`
+- [ ] DA-13 補齊 `indicators.json` 的 `derived`（qma／yma／yoy）：UI-02 詳細圖依 `derived` 決定畫不畫 3 月均／12 月均與 YoY 圖，目前只有汽車銷售、M2、黃金、CPI、PPI 標了 qma／yma；逐一對照講義各指標圖頁補齊（季資料只有 YMA，如債務槓桿 [K 69–91]）
 
 # 畫面
-- [ ] UI-02 指標詳細圖：點卡片展開，照講義格式「原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影」，下方配 YoY 圖；門檻線（PMI 50、Sahm 0.5、Philly Fed 0、期限利差 0、債務 YoY 3%、損益兩平通膨 2%、VIX 12／20／30、YoY 0 線）；支援雙軸對照（如初領 vs 續領）
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
 - [ ] UI-05 公布行事曆：各指標下次公布時間（依講義公布規則）
 - [ ] UI-06 頁尾：資料來源與講義出處聲明、版號（讀 `VERSION`）、最後更新日期
@@ -44,6 +46,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-02 指標詳細圖：點卡片（或鍵盤 Enter／Space）開 `<dialog>`，照講義格式畫原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影，下方 YoY 圖；`thresholds[]` 畫門檻虛線（新增 `on:"yoy"`、`series` 欄位），`series[].axis` 支援雙軸對照（初領／續領、U6／兼職、耐久財、房貸）；lttb 降取樣＋上下圖連動縮放（預設近 20 年）；`?detail=<id>` 直接開啟（完成 2026-10-18）
 - [x] UI-14 頁首 Banner 改用弗里德里希〈霧海上的旅人〉（c. 1818，公有領域，Wikimedia Commons），全站配色改用畫中色票（霧灰、岩褐、灰藍、赭）；Banner 標註出處；深色模式留給 UI-07（完成 2026-10-18）
 - [x] UI-03 綜合訊號總覽：頁首下方新增 `section#signal-summary`，依 [K 4] 統計 19 項計入指標的擴張／中性／收縮（13 項不計），按領先／同時／落後拆表、給多數方向結論，32 個燈號格附判斷依據並可跳到卡片；判讀規則寫成 `indicators.json` 的 `signal` 欄位（raw 門檻／yoy／3 月均對 12 月均趨勢），格式寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] DA-05 衍生指標計算：新增 `tools/derive-data.mjs`，由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/`（NFP 月增減／年增率、自算 Sahm Rule（對照 SAHMREALTIME）、CPI／核心 CPI／PCE／核心 PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 資料對）；`indicators.json` 加 `derived_series`，格式寫入 SU-02 決策檔（完成 2026-10-18）
