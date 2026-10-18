@@ -2,10 +2,11 @@
 name: task-release
 description: >-
   任務做完並驗證後的收尾流程：勾選 TODO.md、更新 VERSION 與 CHANGELOG.md、更新 index.html 頁尾版號與
-  「最後更新日期」、只 stage 本任務的檔、commit、push 分支。當 task-next 走到收尾、或使用者說
-  「收尾」「commit」「/task-release」時使用。不會合併回 main——使用者明確說「merge」才另外做。
+  「最後更新日期」、只 stage 本任務的檔、commit、push 任務分支，再 --no-ff 合併進 dev 並 push dev。
+  當 task-next 走到收尾、或使用者說「收尾」「commit」「/task-release」時使用。
+  不會動 main——dev 合併到 main 要等使用者說「release」，走 project-release skill。
 metadata:
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Task Release — 任務收尾
@@ -22,7 +23,7 @@ git status --short
 git diff --stat
 ```
 
-- 在 `main` 上 → 停下，不 commit。
+- 在 `main` 或 `dev` 上 → 停下，不 commit（收尾只在任務 worktree 上做）。
 - 有不屬於本任務的改動 → 不 stage，有疑問就問使用者。
 
 ---
@@ -88,24 +89,56 @@ git push -u origin "$(git branch --show-current)"
 ```
 
 - 還沒有 remote（SU-01 未完成）→ 略過並在回報註明。
-- **只 push 分支，絕不 push `main`、不 force push。**
+- **絕不 push `main`、不 force push。**
 - push 失敗 → 據實回報，不硬試別的方法。
+- Google Drive 路徑下 `-u` 會因寫 `.git/config` 失敗而報錯，可改用 `git push origin <branch>`（CLAUDE.md §Git 規則）。
 
 ---
 
-## 步驟 6 — 回報
+## 步驟 6 — 合併進 `dev`
 
-- 版號、commit hash、分支名、納入哪些檔
+任務 worktree 收尾的最後一步：把任務分支 `--no-ff` 合併進 `dev`。`dev` 沒有在任何 worktree 被 checkout，所以直接在任務 worktree 切過去合併。**每一步分開跑、確認成功再做下一步**（不要用 `&&` 串一長串，避免前面失敗後面照跑）。
+
+```bash
+B="$(git branch --show-current)"                      # 任務分支名，記下來
+git fetch origin dev:dev                              # 本機 dev 對齊遠端；非 fast-forward → 停下回報
+git log --oneline dev.."$B"                           # 要合併的 commit 清單
+printf '%s\n\n%s\n' "Merge <代號> <一句摘要>（v<VERSION>）" "<Co-Authored-By 行>" > "$CLAUDE_JOB_DIR/tmp/merge_msg.txt"
+git switch dev
+git merge --no-ff -F "$CLAUDE_JOB_DIR/tmp/merge_msg.txt" "$B"
+git log --oneline --graph -3                          # 確認合併 commit 在 dev 頂端
+git push origin dev
+git switch "$B"                                       # 切回任務分支，讓 worktree 維持原狀
+```
+
+- 有衝突 → `git merge --abort`，切回任務分支，回報衝突檔案，問使用者怎麼處理。
+- **`index.lock: File exists`**：`/mnt/g`（Google Drive）上 git 很慢，Claude Code 在背景跑的 `git status --porcelain` 會暫時佔住 `index.lock`，使 `add`／`commit`／`switch`／`merge` 失敗（事後 `ls` 常看不到鎖檔）。**不要手動刪鎖檔**，先等背景的 git 跑完再重試：
+
+  ```bash
+  for i in $(seq 1 60); do pgrep -f "git .*status" >/dev/null || break; sleep 1; done
+  ```
+
+  一直撞到的話，若 `dev` 是任務分支的祖先（`git merge-base --is-ancestor dev "$B"`），可不經 index 建合併 commit，結果與 `--no-ff` 相同：
+
+  ```bash
+  OLD="$(git rev-parse dev)"
+  M="$(git commit-tree "$B^{tree}" -p dev -p "$B" -F "$CLAUDE_JOB_DIR/tmp/merge_msg.txt")"
+  git update-ref refs/heads/dev "$M" "$OLD"
+  git push origin dev
+  ```
+
+  `dev` 不是祖先（期間有別的任務先合進 `dev`）→ 不要用這招，回報使用者。
+
+---
+
+## 步驟 7 — 回報
+
+- 版號、任務 commit hash、任務分支名、納入哪些檔
+- `dev` 合併 commit hash、`dev` 是否已 push
 - 驗證摘要
-- 下一步：「要上線請說『merge』」
+- 下一步：「要上線（`dev` → `main`）請說『release』」
 
----
-
-## 合併回 main（只有使用者說「merge」才做）
-
-1. 先讓使用者確認 commit 清單：`git log --oneline main..<branch>`。
-2. 合併後打 tag：`git tag v<VERSION>`，push `main` 與 tag。
-3. 有 GitHub Pages 時提醒使用者過幾分鐘去看線上版。
+`main` 的合併、打 tag 不在本 skill 範圍，見 `project-release` skill。
 
 ---
 
@@ -113,4 +146,5 @@ git push -u origin "$(git branch --show-current)"
 
 | 版號 | 日期 | 變更 |
 |---|---|---|
+| 1.1.0 | 2026-10-18 | SU-04 收尾改成合併進 `dev`（含 Google Drive 上 index.lock 衝突的處理）；`main` 合併移到 `project-release` |
 | 1.0.0 | 2026-10-18 | 建立：沿用 strategy-matrix `task-release` 1.0.0，加入 VERSION／CHANGELOG 升版與 merge 打 tag |

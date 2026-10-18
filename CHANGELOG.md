@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.2.1 — 2026-10-18
+- SU-04 建立 `dev` 整合分支：任務 worktree 從 `dev` 開出、收尾時合併進 `dev`；新增 `project-release` skill，使用者說「release」才把 `dev` 合併到 `main` 並打 tag；CLAUDE.md §Git 規則／工作流程、task-next 1.1.0、task-release 1.1.0、worker agents 同步更新
+
 ## 0.2.0 — 2026-10-18
 - DA-01 新增指標目錄 `data/indicators.json`：32 個指標依 C／I／G／NX／MC／IFU 分類，含時序、頻率、公布規則、FRED 序列（主／對照／組成、替代標記）、衍生算法代號、門檻線、判讀規則、講義頁碼、狀態（ok／substitute／pending）；NBER 衰退期 `USREC`；SU-02 決策檔補上目錄格式說明
 

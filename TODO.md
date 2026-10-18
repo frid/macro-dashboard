@@ -34,6 +34,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] SU-04 建立 `dev` 分支流程：任務 worktree 從 `dev` 開出、`task-release` 收尾合併進 `dev`、說「release」才用新的 `project-release` skill 把 `dev` 合併到 `main`；CLAUDE.md、task-next、task-release、worker agents 同步（完成 2026-10-18）
 - [x] DA-01 指標目錄 `data/indicators.json`：32 個指標（C 7／I 6／G 2／NX 3／MC 6／IFU 8）＋NBER 衰退期 `USREC`，格式定案寫入 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
 - [x] SU-02 技術選型定案：單檔 `index.html`＋`data/*.json`，圖表庫 Apache ECharts 6.1.0（cdnjs＋SRI），決策紀錄 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
 - [x] SU-01 建立 GitHub repo 與 GitHub Pages 部署：公開 repo `frid/macro-dashboard`，Pages 從 `main` 根目錄發佈 <https://frid.github.io/macro-dashboard/>（完成 2026-10-18）
