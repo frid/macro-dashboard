@@ -244,11 +244,28 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
 .detail .dcap { margin: 8px 0 0; font-size: .82rem; color: var(--muted); }
 .detail .dchart { width: 100%; height: 400px; }
 .detail .dchart.yoy { height: 260px; }
+/* 指標細項說明（UI-15） */
+.detail .dinfo {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .75rem 1.25rem;
+  margin-top: 1rem;
+  padding-top: .75rem;
+  border-top: 1px solid var(--border);
+  font-size: .85rem;
+  line-height: 1.6;
+}
+.detail .dinfo h3 { margin: 0 0 .35rem; font-size: .95rem; color: var(--text); }
+.detail .dinfo p, .detail .dinfo ul { margin: .25rem 0; }
+.detail .dinfo ul { padding-left: 1.2em; }
+.detail .dinfo li { margin: .2rem 0; overflow-wrap: anywhere; }
+.detail .dinfo .note { color: var(--muted); font-size: .8rem; overflow-wrap: anywhere; }
 @media (max-width: 600px) {
   .detail .dbar { padding: 10px 12px 8px; }
   .detail .dbody { padding: 4px 8px 12px; }
   .detail .dchart { height: 300px; }
   .detail .dchart.yoy { height: 210px; }
+  .detail .dinfo { grid-template-columns: 1fr; font-size: .82rem; }
 }
 </style>
 </head>
@@ -283,7 +300,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
-<footer>版本 <span id="app-version">0.14.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.15.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -818,6 +835,68 @@ function detailPlan(ind) {
   return { spread: false, ids: right ? [left.id, right.id] : [left.id], left: left, right: right };
 }
 
+// ---- 指標細項說明（UI-15）：指標內容／資料來源／判斷標準，資料取自 indicators.json ----
+const ROLE_LABEL = { main: '主序列', compare: '對照', component: '計算成分' };
+
+// 把 signal 欄位寫成一句白話（與 evalSignal 的判斷方式一致）
+function signalSentence(sg) {
+  const target = sg.series + (sg.minus ? ' − ' + sg.minus : '');
+  const below = sg.expansionWhen === 'below';
+  const atLabel = STATE_LABEL[sg.atThreshold || 'neu'];
+  if (sg.basis === 'trend') {
+    const [sm, lm] = sg.window || [3, 12];
+    return '以 ' + target + ' 近 ' + sm + ' 個月均值對近 ' + lm + ' 個月均值比較：短期均值' +
+      (below ? '低於' : '高於') + '長期均值為擴張，' + (below ? '高於' : '低於') + '為收縮，相等為' + atLabel + '。';
+  }
+  if (sg.basis === 'raw' || sg.basis === 'yoy') {
+    const what = sg.basis === 'yoy' ? target + ' 年增率' : target;
+    const unit = sg.basis === 'yoy' ? '%' : '';
+    if (sg.neutralBand) {
+      const [lo, hi] = sg.neutralBand;
+      return '看 ' + what + ' 最新值：介於 ' + lo + unit + '–' + hi + unit + '（含）為中性，' +
+        (below ? '低於 ' + lo + unit : '高於 ' + hi + unit) + ' 為擴張，' +
+        (below ? '高於 ' + hi + unit : '低於 ' + lo + unit) + ' 為收縮。';
+    }
+    const t = sg.threshold + unit;
+    return '看 ' + what + ' 最新值：' + (below ? '低於 ' : '高於 ') + t + ' 為擴張，' +
+      (below ? '高於 ' : '低於 ') + t + ' 為收縮，剛好等於 ' + t + ' 為' + atLabel + '。';
+  }
+  return '判斷方式：' + sg.basis + '。';
+}
+
+function detailInfoHtml(ind) {
+  const desc = '<section><h3>指標內容</h3><p>' + esc(ind.description || '—') + '</p></section>';
+
+  const list = ind.series || [];
+  let src = list.length
+    ? '<ul>' + list.map(s => '<li>' + esc(s.id) + '｜' + esc(SOURCE_LABEL[s.source] || s.source || '來源未標') + '｜' +
+        esc(ROLE_LABEL[s.role] || s.role || '') + (s.substitute ? ' <span class="badge-sub">替代</span>' : '') +
+        (s.note ? '<div class="note">' + esc(s.note) + '</div>' : '') +
+        (s.lag ? '<div class="note">延遲：' + esc(s.lag) + '</div>' : '') + '</li>').join('') + '</ul>'
+    : '<p>無可用序列</p>';
+  if (ind.external) {
+    src += '<p>原始來源：' + esc(ind.external.name) + (ind.external.note ? '（' + esc(ind.external.note) + '）' : '') + '</p>';
+  }
+  if (ind.derived_series && ind.derived_series.length) {
+    src += '<p class="note">衍生序列（本站自行計算）：' + esc(ind.derived_series.join('、')) + '</p>';
+  }
+  const source = '<section><h3>資料來源</h3>' + src + '</section>';
+
+  let rule = ind.rule ? '<p>' + esc(ind.rule) + '</p>' : '';
+  const th = ind.thresholds || [];
+  if (th.length) {
+    rule += '<ul>' + th.map(t => '<li>' + esc(t.value) + '：' + esc(t.label) +
+      (t.on === 'yoy' ? '（YoY）' : '') + (t.series ? '（' + esc(t.series) + '）' : '') + '</li>').join('') + '</ul>';
+  }
+  if (ind.signal) {
+    rule += '<p>綜合訊號：' + esc(signalSentence(ind.signal)) + '</p>';
+    if (ind.signal.note) rule += '<p class="note">' + esc(ind.signal.note) + '</p>';
+  }
+  const judge = '<section><h3>判斷標準</h3>' + (rule || '<p>—</p>') + '</section>';
+
+  return '<div class="dinfo">' + desc + source + judge + '</div>';
+}
+
 async function openDetail(ind) {
   const dlg = document.getElementById('detail');
   disposeDetail();
@@ -832,8 +911,9 @@ async function openDetail(ind) {
     '<div class="dmeta">' + tag + (isSub ? '<span class="badge-sub">替代</span>' : '') +
     '<span>序列：' + esc(plan.ids.join('、')) + '</span><span>來源：' + esc(srcText) + '</span>' +
     '<span class="dasof">資料截至 …</span>' + (ind.pages ? '<span>講義 [' + esc(ind.pages) + ']</span>' : '') + '</div>';
-  const body = dlg.querySelector('.dbody');
-  body.innerHTML = '<p class="mode">載入中…</p>';
+  // 圖表放 .dcharts、說明放 .dinfo（UI-15）：圖表載入失敗只覆寫 .dcharts，說明照常顯示
+  dlg.querySelector('.dbody').innerHTML = '<div class="dcharts"><p class="mode">載入中…</p></div>' + detailInfoHtml(ind);
+  const body = dlg.querySelector('.dcharts');
   if (!dlg.open) dlg.showModal();
 
   let raw, rightPts = null, recObs = [];

@@ -2,8 +2,11 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
-## 0.14.0 — 2026-10-18
+## 0.15.0 — 2026-10-18
 - DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`（`node tools/fetch-data.mjs FEDWATCH` 可單獨執行），解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約（非官方），依 CME FedWatch 方法自算最近一場 FOMC 會議的目標區間機率與 Now／1D／1W／1M 比較，寫入 `data/fedwatch.json`（替代；失敗不覆寫）；2026-10-28 會議 Now 84.5／15.5、1W 82.3／17.7、1M 42.4／57.6 與 CME 一致；`fed-funds-rate` 的 `external` 新增選用 `url` 指向 CME FedWatch；SU-02 決策檔、README 同步；畫面留給 UI-17
+
+## 0.14.0 — 2026-10-18
+- UI-15 指標細項說明：詳細面板圖表下方加「指標內容／資料來源／判斷標準」三欄（寬螢幕三欄、600px 以下單欄）；`indicators.json` 32 個指標新增 `description`（講義自行摘要，附 [K 頁碼]）；資料來源列出全部序列、替代徽章、延遲、原始來源與衍生序列；判斷標準列 `rule`、門檻與 `signal` 白話句；圖表區與說明區分開，載入失敗不影響說明
 
 ## 0.13.2 — 2026-10-18
 - UI-12 卡片數值細修：`indicators.json` 序列加 `unit`；卡片數值與變動帶單位（百萬美元換算億／兆美元並註原始單位、% 類變動用「個百分點」）；前值或現值 ≤ 0 時不顯示百分比變動（修 Sahm ▲100%）；詳細圖 caption、Y 軸、tooltip 加單位
