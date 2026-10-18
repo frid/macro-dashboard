@@ -429,6 +429,33 @@ function fmtNum(v, mode) {
   if (mode === 'yoy') s += '%';
   return s;
 }
+// 單位換算（UI-12）：百萬美元換成可讀的兆／億美元，回傳 { s: 數字字串, u: 單位 }
+function fmtMoney(v) {
+  const abs = Math.abs(v);
+  const f = x => x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1e6) return { s: f(v / 1e6), u: '兆美元' };
+  if (abs >= 100) return { s: f(v / 100), u: '億美元' };
+  return { s: f(v), u: '百萬美元' };
+}
+// 卡片值與差值的「數字＋單位」；unit 為「%」時值直接接 %、差值接「個百分點」，「指數」不加字，百萬美元走換算
+function fmtWithUnit(v, mode, unit, isDiff) {
+  if (unit === '百萬美元') { const m = fmtMoney(isDiff ? Math.abs(v) : v); return m.s + ' ' + m.u; }
+  let s;
+  if (isDiff) {
+    const dg = (mode === 'mom' || mode === 'raw') && Math.abs(v) >= 1000 ? 0 : 2;
+    s = Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: dg, maximumFractionDigits: dg });
+  } else s = fmtNum(v, mode);
+  if (!unit || unit === '指數') return s;
+  if (unit === '%') return isDiff ? s + ' 個百分點' : s + '%';
+  return s + ' ' + unit;
+}
+// 值下方的說明文字：raw 卡依序列單位補註
+function modeLabel(mode, unit) {
+  if (mode !== 'raw') return MODE_LABEL[mode];
+  if (unit === '百萬美元') return '原值（原始單位：百萬美元）';
+  if (unit === '指數') return '原值（指數）';
+  return MODE_LABEL[mode];
+}
 function esc(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
@@ -488,15 +515,21 @@ async function buildCard(ind) {
   }
   const freq = data.freq || ind.frequency;
 
+  // 卡片單位：只有 raw／mom 卡採用主序列的 unit（沒有 unit 時行為同舊版）
+  const cardUnit = (mode === 'raw' || mode === 'mom') ? (((ind.series || []).find(x => x.id === ids[0]) || {}).unit || '') : '';
   let changeHtml = '<span class="change flat">—</span>';
   if (prev) {
     const diff = last[1] - prev[1];
     const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
     const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '■';
-    const dg = (mode === 'mom' || mode === 'raw') && Math.abs(diff) >= 1000 ? 0 : 2;
-    let txt = Math.abs(diff).toLocaleString('en-US', { minimumFractionDigits: dg, maximumFractionDigits: dg });
-    if (mode === 'yoy' || mode === 'spread') txt += ' 個百分點';
-    else if (mode === 'raw' && prev[1] !== 0) txt += '（' + (Math.abs(diff / prev[1]) * 100).toFixed(2) + '%）';
+    let txt;
+    if (mode === 'yoy' || mode === 'spread') {
+      txt = fmtWithUnit(diff, mode, '%', true);
+    } else {
+      txt = fmtWithUnit(diff, mode, cardUnit === '千人' ? '' : cardUnit, true);
+      // 原值接近 0 或為負時百分比沒有意義：% 序列不附，其餘只在前後兩期都 > 0 時附
+      if (mode === 'raw' && cardUnit !== '%' && prev[1] > 1e-9 && last[1] > 0) txt += '（' + (Math.abs(diff / prev[1]) * 100).toFixed(2) + '%）';
+    }
     changeHtml = '<span class="change ' + cls + '" title="與前一期（' + esc(fmtDate(prev[0], freq)) + '）比較">' + arrow + ' ' + txt + '</span>';
   }
 
@@ -510,8 +543,8 @@ async function buildCard(ind) {
   const srcText = sourceText(ids, defOf);
 
   const card = el('<div class="card">' + headHtml(ind) + subBadge +
-    '<div class="value-row"><span class="value">' + fmtNum(last[1], mode) + '</span>' + changeHtml + '</div>' +
-    '<div class="mode">' + MODE_LABEL[mode] + '</div>' +
+    '<div class="value-row"><span class="value">' + esc(fmtWithUnit(last[1], mode, cardUnit, false)) + '</span>' + changeHtml + '</div>' +
+    '<div class="mode">' + esc(modeLabel(mode, cardUnit)) + '</div>' +
     '<div class="spark"></div>' +
     '<div class="meta"><span>資料截至 ' + esc(fmtDate(last[0], freq)) + '</span><span>' + esc(ind.pages || '') + '</span></div>' +
     '<div class="meta"><span>' + esc(srcText) + '</span></div></div>');
@@ -921,9 +954,14 @@ function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
   };
   const label = s => s.id + (s.note ? ' ' + s.note : '');
   const leftName = plan.spread ? '原值（' + plan.ids.join(' − ') + '）' : '原值 ' + plan.left.id;
+  // 序列單位（UI-12）：只加在文字上（caption、Y 軸名稱、tooltip），不影響計算與縮放
+  const leftUnit = plan.spread ? '百分點' : (plan.left.unit || '');
+  const rightUnit = plan.right ? (plan.right.unit || '') : '';
+  const unitTxt = u => u ? '（單位：' + u + '）' : '';
   const caption = plan.spread
     ? '利差 ' + plan.ids.join(' − ') + '（百分點）'
-    : (plan.right ? '左軸 ' + label(plan.left) + '；右軸 ' + label(plan.right) : label(plan.left));
+    : (plan.right ? '左軸 ' + label(plan.left) + unitTxt(leftUnit) + '；右軸 ' + label(plan.right) + unitTxt(rightUnit) : label(plan.left) + unitTxt(leftUnit));
+  const tipFmt = u => v => v == null ? '—' : fmtNum(v, 'raw') + (u && u !== '指數' ? (u === '%' ? '%' : ' ' + u) : '');
 
   // 兩張圖用相同的 x 範圍，dataZoom 連動才會對齊
   let xMin = raw[0][0];
@@ -947,7 +985,7 @@ function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
     textStyle: { color: C.text },
     tooltip: { trigger: 'axis', confine: true },
     legend: { top: 0, textStyle: { color: C.text } },
-    grid: { left: 56, right: plan.right ? 60 : 24, top: 34, bottom: withSlider ? 64 : 28 },
+    grid: { left: 56, right: plan.right ? 60 : 24, top: 44, bottom: withSlider ? 64 : 28 },
     xAxis: { type: 'time', min: xRange.min, max: xRange.max, axisLabel: { color: C.muted, hideOverlap: true }, axisLine: { lineStyle: { color: C.border } } },
     dataZoom: [{ type: 'inside', startValue: zoomStart, endValue: xRange.max }]
       .concat(withSlider ? [{ type: 'slider', startValue: zoomStart, endValue: xRange.max, bottom: 8, height: 22, labelFormatter: v => echarts.time.format(v, '{yyyy}-{MM}', false) }] : [])
@@ -969,9 +1007,10 @@ function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
   })];
   if (derived.includes('qma')) top.push(line('3 月均 (QMA)', rollingMean(raw, 3), C.qma));
   if (derived.includes('yma')) top.push(line('12 月均 (YMA)', rollingMean(raw, 12), C.yma));
-  if (plan.right && rightPts) top.push(line('原值 ' + plan.right.id + '（右軸）', rightPts, C.right, { yAxisIndex: 1 }));
-  const topY = [yAxis('left')];
-  if (plan.right) topY.push(yAxis('right', { splitLine: { show: false } }));
+  if (plan.right && rightPts) top.push(line('原值 ' + plan.right.id + '（右軸）', rightPts, C.right, { yAxisIndex: 1, tooltip: { valueFormatter: tipFmt(rightUnit) } }));
+  const axisName = (u, al) => u ? { name: u, nameTextStyle: { color: C.muted, align: al } } : {};
+  const topY = [yAxis('left', axisName(leftUnit, 'left'))];
+  if (plan.right) topY.push(yAxis('right', Object.assign({ splitLine: { show: false } }, axisName(rightUnit, 'right'))));
 
   let html = '<p class="dcap">' + esc(caption) + '・灰色區塊為 NBER 衰退期（' + esc(recessionId) + '）</p><div class="dchart top"></div>';
   if (hasYoy) html += '<p class="dcap">年增率 YoY（%）</p><div class="dchart yoy"></div>';
@@ -981,7 +1020,7 @@ function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
   topChart.setOption(Object.assign(baseOption(!hasYoy), {
     yAxis: topY,
     series: top,
-    tooltip: { trigger: 'axis', confine: true, valueFormatter: v => v == null ? '—' : fmtNum(v, 'raw') }
+    tooltip: { trigger: 'axis', confine: true, valueFormatter: tipFmt(leftUnit) }
   }));
   detail.charts.push(topChart);
 
