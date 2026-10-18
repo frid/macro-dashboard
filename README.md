@@ -33,6 +33,7 @@
 ## 更新資料
 
 本機更新全部序列：`node tools/fetch-data.mjs`（需 Node 24；後面加序列代碼可只更新指定的，如 `node tools/fetch-data.mjs DGS10`）。
+抓完再執行 `node tools/derive-data.mjs` 重算衍生序列（年增率、Sahm Rule、利差等，寫到 `data/derived/`）。
 
 ## 聲明
 
