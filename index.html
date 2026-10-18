@@ -267,6 +267,31 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   .detail .dchart.yoy { height: 210px; }
   .detail .dinfo { grid-template-columns: 1fr; font-size: .82rem; }
 }
+/* 回到最上層（UI-16） */
+.to-top {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: var(--on-banner);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(var(--banner-shade), .35);
+  opacity: 1;
+  transition: opacity .2s, filter .2s;
+}
+.to-top[hidden] { display: none; }
+.to-top:hover { filter: brightness(1.15); }
+.to-top:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 600px) {
+  .to-top { right: 16px; bottom: 16px; }
+}
 </style>
 </head>
 <body>
@@ -301,6 +326,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
 <footer>版本 <span id="app-version">0.16.1</span> ・ 網站更新 <span id="last-updated">2026-10-18</span> ・ 資料抓取 <span id="data-fetched">…</span></footer>
+<button type="button" id="to-top" class="to-top" aria-label="回到最上層" title="回到最上層" hidden>↑</button>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -1138,6 +1164,26 @@ async function main() {
   await Promise.all(jobs);
   fillSummary(summary, cat.indicators, await sigJob, await lightJob);
 }
+// 回到最上層按鈕：捲動超過一個視窗高度才顯示
+function initToTop() {
+  const btn = document.getElementById('to-top');
+  if (!btn) return;
+  let queued = false;
+  const update = () => {
+    queued = false;
+    btn.hidden = window.scrollY <= window.innerHeight;
+  };
+  const onScroll = () => {
+    if (!queued) { queued = true; requestAnimationFrame(update); }
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  btn.addEventListener('click', () => {
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  });
+  update();
+}
+initToTop();
 main();
 </script>
 </body>

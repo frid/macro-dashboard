@@ -5,6 +5,9 @@
 ## 0.16.1 — 2026-10-18
 - UI-06 頁尾分開顯示「版本／網站更新／資料抓取」：資料抓取日取頁面已載入序列 `fetched_at` 的最大值（不多抓檔，`fedwatch.json` 待 UI-17 讀入時再納入）；版號改讀根目錄 `VERSION`（符合 SemVer 才覆寫，讀不到沿用頁尾寫死值）；資料來源與講義出處聲明已由 UI-09 完成
 
+## 0.16.0 — 2026-10-18
+- UI-16 回到最上層按鈕：捲動超過一個視窗高度時右下角浮出圓形 ↑ 按鈕（用 `--accent` 色票、鍵盤可聚焦），點擊平滑捲回頁首，`prefers-reduced-motion` 時直接跳轉；捲動監聽以 requestAnimationFrame 節流
+
 ## 0.15.0 — 2026-10-18
 - DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`（`node tools/fetch-data.mjs FEDWATCH` 可單獨執行），解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約（非官方），依 CME FedWatch 方法自算最近一場 FOMC 會議的目標區間機率與 Now／1D／1W／1M 比較，寫入 `data/fedwatch.json`（替代；失敗不覆寫）；2026-10-28 會議 Now 84.5／15.5、1W 82.3／17.7、1M 42.4／57.6 與 CME 一致；`fed-funds-rate` 的 `external` 新增選用 `url` 指向 CME FedWatch；SU-02 決策檔、README 同步；畫面留給 UI-17
 
