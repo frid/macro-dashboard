@@ -34,8 +34,10 @@
   - UI-01 留下：SOFR 卡因 `SOFR.json` substitute=true 也顯示「替代」，但 SOFR 本身是 MC 指標主序列，確認是否該標
 - [ ] UI-11 每一個 BLOCK 要有 G（綠色：代表沒問題）、Y（黃色：代表警告、再觀察）、R（紅色：代表危險）
   - 與 UI-03 綜合訊號總覽相關；各指標的 G／Y／R 門檻要依講義判讀規則定
+  - G／Y／R 以 DA-05 衍生值（`data/derived/`）對照講義門檻判斷（如 Sahm ≥ 0.5、赤字占 GDP 3%、NFP YoY 0 線），燈號匯總到 `index.html` 最上層的總覽
 - [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
+  - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
 
 # 文件
 - [ ] DC-01 README：用途、線上網址、資料來源、如何本機更新資料
