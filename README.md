@@ -69,6 +69,18 @@
 
 Yahoo 的 chart 介面非官方、僅供學習使用，可能隨時變更或失效。網站：<https://finance.yahoo.com/>。
 
+### FedWatch 利率機率（`data/fedwatch.json`，**替代**）
+
+下次 FOMC 會議的目標區間機率（降息／不變／升息），與 1 天、1 週、1 個月前比較。
+
+| 來源 | 用途 |
+|---|---|
+| Yahoo Finance `ZQ<月碼><YY>.CBT`（30 天聯邦基金期貨各月合約，非官方） | 會議月與前／後一個月合約價格，隱含利率 = 100 − 價格 |
+| federalreserve.gov [FOMC 會議日程](https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm) | 找出最近一場尚未舉行的會議 |
+| FRED `DFEDTARL`、`DFEDTARU` | 目前目標區間 |
+
+參考來源為 [CME FedWatch Tool](https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html)：本站**不直接抓取** CME（其 robots 與使用條款禁止程式抓取），而是依 CME 公開的 FedWatch 方法自行計算，只算最近一場會議，數字可能與 CME 頁面略有差異。算法見 [doc/decisions/SU-02-技術選型.md](doc/decisions/SU-02-技術選型.md)「FedWatch 機率」。
+
 ### EIA（美國能源資訊署）
 
 | 指標 | 代碼 | 說明 |
@@ -152,6 +164,7 @@ TradingView 圖表資料的取得方式為非官方協定，僅供學習使用�
 | `data/indicators.json` | 指標目錄：分類、領先／同時／落後、資料來源、序列代碼、判讀規則、講義頁碼 |
 | `data/series/` | 各序列的歷史資料 `<ID>.json`，由 `tools/fetch-data.mjs` 產生 |
 | `data/derived/` | 衍生序列 `DRV_*.json`，由 `tools/derive-data.mjs` 計算 |
+| `data/fedwatch.json` | 下次 FOMC 會議利率機率（依 CME FedWatch 方法自算，替代），由 `tools/fetch-data.mjs` 產生 |
 | `tools/` | 資料抓取與衍生計算腳本（`fetch-data.mjs`、`derive-data.mjs`） |
 | `doc/decisions/` | 技術與資料方案的決策紀錄（如 SU-02 技術選型、DA-04 非 FRED 指標方案） |
 | `doc/reference/` | 參考資料：指標清單、講義圖表頁摘要 |
@@ -163,7 +176,7 @@ TradingView 圖表資料的取得方式為非官方協定，僅供學習使用�
 
 需 Node 24（使用內建的 `fetch`／`WebSocket`，零套件，不需 `npm install`）。
 
-1. 抓取序列：`node tools/fetch-data.mjs`（抓 `indicators.json` 內所有序列）。也可指定代碼只更新部分，如 `node tools/fetch-data.mjs DGS10 TV_BDI`。
+1. 抓取序列：`node tools/fetch-data.mjs`（抓 `indicators.json` 內所有序列，最後產生 `data/fedwatch.json`）。也可指定代碼只更新部分，如 `node tools/fetch-data.mjs DGS10 TV_BDI`；只更新 FedWatch 機率用 `node tools/fetch-data.mjs FEDWATCH`。
 2. 重算衍生序列：`node tools/derive-data.mjs`（讀 `data/series/`，寫到 `data/derived/`；也可指定如 `DRV_SAHM`）。
 
 注意事項：

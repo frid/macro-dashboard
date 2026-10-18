@@ -1,0 +1,154 @@
+{
+  "source": "Yahoo Finance ZQ 期貨＋federalreserve.gov FOMC 日程，依 CME FedWatch 方法自算",
+  "substitute": true,
+  "reference_url": "https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html",
+  "generated_at": "2026-10-18T13:47:03.127Z",
+  "as_of": "2026-10-18",
+  "price_date": "2026-10-16",
+  "meeting": {
+    "date": "2026-10-28",
+    "effective": "2026-10-29",
+    "contract": "ZQV26",
+    "expires": "2026-10-30",
+    "price": 96.115
+  },
+  "current_target": {
+    "lower": 375,
+    "upper": 400
+  },
+  "probabilities": {
+    "now": [
+      {
+        "range": "375-400",
+        "p": 0.845
+      },
+      {
+        "range": "400-425",
+        "p": 0.155
+      }
+    ],
+    "1d": [
+      {
+        "range": "375-400",
+        "p": 0.845
+      },
+      {
+        "range": "400-425",
+        "p": 0.155
+      }
+    ],
+    "1w": [
+      {
+        "range": "375-400",
+        "p": 0.8229
+      },
+      {
+        "range": "400-425",
+        "p": 0.1771
+      }
+    ],
+    "1m": [
+      {
+        "range": "375-400",
+        "p": 0.4243
+      },
+      {
+        "range": "400-425",
+        "p": 0.5757
+      }
+    ]
+  },
+  "summary": {
+    "now": {
+      "ease": 0,
+      "no_change": 0.845,
+      "hike": 0.155
+    },
+    "1d": {
+      "ease": 0,
+      "no_change": 0.845,
+      "hike": 0.155
+    },
+    "1w": {
+      "ease": 0,
+      "no_change": 0.8229,
+      "hike": 0.1771
+    },
+    "1m": {
+      "ease": 0,
+      "no_change": 0.4243,
+      "hike": 0.5757
+    }
+  },
+  "inputs": {
+    "method": "next_month",
+    "contracts": [
+      "ZQV26",
+      "ZQX26"
+    ],
+    "meeting_month_days": 31,
+    "days_before_effective": 28,
+    "horizons": {
+      "now": {
+        "price_date": "2026-10-16",
+        "prices": {
+          "ZQV26": 96.115,
+          "ZQX26": 96.08
+        },
+        "target": {
+          "lower": 375,
+          "upper": 400
+        },
+        "avg": 3.885,
+        "pre": 3.88125,
+        "post": 3.92,
+        "delta": 0.03875
+      },
+      "1d": {
+        "price_date": "2026-10-16",
+        "prices": {
+          "ZQV26": 96.115,
+          "ZQX26": 96.08
+        },
+        "target": {
+          "lower": 375,
+          "upper": 400
+        },
+        "avg": 3.885,
+        "pre": 3.88125,
+        "post": 3.92,
+        "delta": 0.03875
+      },
+      "1w": {
+        "price_date": "2026-10-09",
+        "prices": {
+          "ZQV26": 96.115,
+          "ZQX26": 96.075
+        },
+        "target": {
+          "lower": 375,
+          "upper": 400
+        },
+        "avg": 3.885,
+        "pre": 3.880714,
+        "post": 3.925,
+        "delta": 0.044286
+      },
+      "1m": {
+        "price_date": "2026-09-18",
+        "prices": {
+          "ZQV26": 96.105,
+          "ZQX26": 95.975
+        },
+        "target": {
+          "lower": 375,
+          "upper": 400
+        },
+        "avg": 3.895,
+        "pre": 3.881071,
+        "post": 4.025,
+        "delta": 0.143929
+      }
+    }
+  }
+}

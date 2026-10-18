@@ -14,7 +14,6 @@
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
 - [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日；TradingView 序列（`TV_*`）`last_updated` 為 null，一律用最後一筆觀測日
 - [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
-- [ ] DA-11 加上 FED Watch 來源顯示
 - [ ] DA-12 Philly Fed 未來指數：抓 `GAFDFSA066MSFRBPHI`（Future General Activity），加進 `philly-fed` 當雙軸對照（現況 vs 未來）[K 124]；UI-02 雙軸已就緒，資料到位後補 `axis: "right"`
 - [ ] DA-13 補齊 `indicators.json` 的 `derived`（qma／yma／yoy）：UI-02 詳細圖依 `derived` 決定畫不畫 3 月均／12 月均與 YoY 圖，目前只有汽車銷售、M2、黃金、CPI、PPI 標了 qma／yma；逐一對照講義各指標圖頁補齊（季資料只有 YMA，如債務槓桿 [K 69–91]）
 
@@ -33,11 +32,14 @@
 - [ ] UI-15 每個指標細項說明「指標內容、資料來源、判斷標準」（放在 UI-02 展開的細項面板，依賴 UI-02）
   - 指標內容：`indicators.json` 每個指標新增 `description`（依講義用自己的話摘要，附 `[K 頁碼]`）
   - 資料來源取自 `series[]`（替代要註明）；判斷標準取自 `rule`／`thresholds`／`signal`
+- [ ] UI-16 加上回到最上層的按鈕
+- [ ] UI-17 FedWatch 區塊：讀 `data/fedwatch.json` 顯示最近一場 FOMC 會議的目標利率區間機率（Ease／No change／Hike、Now／1D／1W／1M），標「替代：依 CME 方法以 ZQ 期貨自算」，附連結 <https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html>（依賴 DA-11）
 
 # 文件
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`，解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約，依 CME FedWatch 方法自算最近一場會議的目標區間機率（Now／1D／1W／1M）寫入 `data/fedwatch.json`（替代，2026-10-28 會議 84.5／15.5 與 CME 一致）；`fed-funds-rate` 的 `external` 加 CME 連結 `url`；畫面另開 UI-17（完成 2026-10-18）
 - [x] UI-11 每個指標卡片與總覽加 G／Y／R 燈號：門檻型（raw／yoy）訊號擴張 G、中性 Y、跨門檻 R，趨勢型轉弱只到 Y；新增 `light` 欄位補判預算赤字（赤字占 GDP > 3% → R）、債務 YoY > 3%、PCE 年增率 > 2%、TIPS 損益兩平 ≥ 2%（Y）；總覽加燈號統計，`data/derived/` 可直接讀（完成 2026-10-18）
 - [x] DA-10 日資料改用即時來源：VIX 主序列改 Cboe 官方 CSV（`CBOE_VIX`，`VIXCLS` 留作對照）；10 年期公債、3 個月國庫券改為 FRED 歷史接上美國財政部最新日（`UST_DGS10`、`UST_DTB3`），皆比 FRED 早 1 個營業日、重疊期間 100% 相同；T10Y3M／T10Y2Y／T10YIE、DFF／SOFR、目標區間已與官方同步，DBAA／DAAA／BAMLC0A4CBBB／DTWEXBGS 無免費即時來源，維持 FRED 並以 `lag` 在畫面註明延遲；比對紀錄見 DA-04 決策檔（完成 2026-10-18）
 - [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）

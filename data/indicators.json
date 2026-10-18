@@ -459,7 +459,7 @@
       "rule": "二戰後每次衰退結束前，Fed 都曾大幅降息；降息循環的節奏可用來判斷景氣位置。",
       "pages": "K 108–112",
       "status": "ok",
-      "external": null,
+      "external": { "name": "CME FedWatch Tool", "url": "https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html", "note": "下次 FOMC 會議利率機率；本站依 CME 方法以 ZQ 期貨自算（替代），見 data/fedwatch.json" },
       "signal": null
     },
     {

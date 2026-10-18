@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 // 抓各來源資料 → data/series/<ID>.json（DA-02 FRED；DA-04 加 Yahoo／EIA／TradingView；DA-10 加 Cboe／美國財政部）
+// DA-11 加 FEDWATCH → data/fedwatch.json（Yahoo ZQ 期貨＋federalreserve.gov FOMC 日程，依 CME FedWatch 方法自算）
 // 用法：
-//   node tools/fetch-data.mjs                     抓 indicators.json 內所有序列＋USREC
+//   node tools/fetch-data.mjs                     抓 indicators.json 內所有序列＋USREC，再產生 data/fedwatch.json
 //   node tools/fetch-data.mjs DGS10 TV_BDI        只抓指定序列
+//   node tools/fetch-data.mjs FEDWATCH            只產生 data/fedwatch.json（DA-11，下次 FOMC 會議利率機率）
 //   抓完後執行 node tools/derive-data.mjs 重算衍生序列（data/derived/，DA-05）
 // 依 series[].source 分派：
 //   FRED         公開 CSV（fredgraph.csv）
@@ -407,6 +409,255 @@ function fetchTradingView(metas) {
   });
 }
 
+// ---- FEDWATCH：下次 FOMC 會議利率機率（DA-11）----
+// 依 CME FedWatch 公開方法論，用 Yahoo ZQ（30 天聯邦基金期貨）各月合約自算（替代；不抓 cmegroup.com）。
+// 1. federalreserve.gov FOMC 日程頁：<h4>YYYY FOMC Meetings 區塊，取 fomc-meeting__month／__date；
+//    兩天會議取第二天為決策日；跨月（如 "Apr/May" "30-1"）取後一個月；notation vote／unscheduled 等非例會略過。
+// 2. 只算最近一場決策日 >= 今天（美東日期）的會議；決策日隔天生效。
+// 3. 會議月 N 天、會前 m 天（= 決策日）：下個月沒有會議 → 下月合約隱含利率當會後利率 post，
+//    反推會前 pre = (avg·N − post·(N−m))/m；否則前月沒有會議 → 前月當 pre，推 post = (avg·N − pre·m)/(N−m)。
+//    隱含利率 = 100 − 價格。Δ = post − pre，以 25bp 步階拆成兩個相鄰目標區間的機率。
+// 4. now 用最新一根日線收盤（盤中為最新價）；1d／1w／1m 以今天（美東）往前 1 天／7 天／1 個月，
+//    取該日或之前最近、兩個合約都有收盤的交易日重算（同一場會議）。
+// 目標區間取 data/series/DFEDTARL、DFEDTARU（各期取價格日或之前最近一筆）；全量執行時這兩個序列會先更新。
+// 任一步失敗 → 丟出錯誤，不寫檔、不覆蓋舊的 data/fedwatch.json。
+const FEDWATCH_OUT = path.join(ROOT, 'data', 'fedwatch.json');
+const FOMC_URL = 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm';
+const FEDWATCH_REF = 'https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html';
+const ZQ_CODES = 'FGHJKMNQUVXZ'; // 1～12 月期貨月碼
+const MONTH_NAMES = { January: 1, February: 2, March: 3, April: 4, May: 5, June: 6, July: 7, August: 8, September: 9, October: 10, November: 11, December: 12 };
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const daysInMonth = (y, m) => new Date(Date.UTC(y, m, 0)).getUTCDate();
+const addMonth = (y, m, k) => {
+  const t = y * 12 + (m - 1) + k;
+  return [Math.floor(t / 12), (t % 12) + 1];
+};
+const ymKey = (y, m) => `${y}-${pad2(m)}`;
+const etToday = () => localDate(Math.floor(Date.now() / 1000), 'America/New_York');
+
+function shiftDate(iso, { days = 0, months = 0 }) {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (months) {
+    const [y2, m2] = addMonth(y, m, months);
+    return `${y2}-${pad2(m2)}-${pad2(Math.min(d, daysInMonth(y2, m2)))}`;
+  }
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+// 合約月最後一個平日（未扣假日；ZQ 於合約月最後營業日到期）
+function lastWeekday(y, m) {
+  let d = daysInMonth(y, m);
+  while ([0, 6].includes(new Date(Date.UTC(y, m - 1, d)).getUTCDay())) d--;
+  return `${y}-${pad2(m)}-${pad2(d)}`;
+}
+
+function parseFomc(html) {
+  const meetings = [];
+  for (const b of html.split(/<h4[\s>]/i).slice(1)) {
+    const ym = b.match(/^[\s\S]{0,200}?(\d{4}) FOMC Meetings/);
+    if (!ym) continue;
+    const year = Number(ym[1]);
+    const items = [...b.matchAll(/class="[^"]*fomc-meeting__(month|date)\b[^"]*"[^>]*>([\s\S]*?)<\/div>/g)];
+    for (let i = 0; i + 1 < items.length; i++) {
+      if (items[i][1] !== 'month' || items[i + 1][1] !== 'date') continue;
+      const monthTxt = cellText(items[i][2]);
+      const dateTxt = cellText(items[i + 1][2]);
+      i++;
+      const dm = dateTxt.match(/^(\d{1,2})(?:-(\d{1,2}))?\*?$/);
+      if (!dm) continue; // notation vote、unscheduled、cancelled 等非例會
+      const lastMonth = monthTxt.split('/').at(-1).trim();
+      const mon = MONTH_NAMES[lastMonth] ?? MONTHS[lastMonth.slice(0, 3)];
+      if (!mon) throw new Error(`FOMC 日程月份無法解析：${year} ${monthTxt}`);
+      const day = Number(dm[2] ?? dm[1]);
+      if (day < 1 || day > daysInMonth(year, mon)) throw new Error(`FOMC 日程日期不合理：${year} ${monthTxt} ${dateTxt}`);
+      meetings.push(`${year}-${pad2(mon)}-${pad2(day)}`);
+    }
+  }
+  if (meetings.length === 0) throw new Error('FOMC 日程頁找不到任何會議（頁面結構可能改變）');
+  return [...new Set(meetings)].sort();
+}
+
+// Yahoo ZQ 月合約日線：Map<YYYY-MM-DD, 收盤>（含當日盤中最新價，作為 now）
+async function fetchZq(contract) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${contract}.CBT?range=3mo&interval=1d`;
+  const { text } = await download(url, { 'User-Agent': UA }).catch((e) => {
+    throw new Error(`Yahoo ${contract}.CBT ${e.message}`);
+  });
+  let j;
+  try {
+    j = JSON.parse(text);
+  } catch {
+    throw new Error(`Yahoo ${contract} 回應不是 JSON：${text.slice(0, 80)}`);
+  }
+  const r = j?.chart?.result?.[0];
+  if (!r) throw new Error(`Yahoo ${contract} 無資料：${JSON.stringify(j?.chart?.error ?? j).slice(0, 120)}`);
+  const tz = r.meta?.exchangeTimezoneName || 'America/New_York';
+  const t = r.timestamp ?? [];
+  const close = r.indicators?.quote?.[0]?.close ?? [];
+  if (t.length === 0 || t.length !== close.length) throw new Error(`Yahoo ${contract} 時間與收盤筆數不符或為空`);
+  const m = new Map();
+  for (let i = 0; i < t.length; i++) {
+    const c = close[i];
+    if (c == null || !Number.isFinite(c)) continue;
+    m.set(localDate(t[i], tz), toFloat32Precision(c));
+  }
+  if (m.size === 0) throw new Error(`Yahoo ${contract} 沒有收盤價`);
+  return m;
+}
+
+async function readTarget(id) {
+  const j = JSON.parse(await readFile(path.join(OUT_DIR, `${id}.json`), 'utf8'));
+  const obs = (j.observations ?? []).filter(([, v]) => v != null);
+  if (obs.length === 0) throw new Error(`data/series/${id}.json 沒有數值`);
+  return obs;
+}
+const valueAsOf = (obs, date) => {
+  let v = null;
+  for (const [d, x] of obs) {
+    if (d > date) break;
+    v = x;
+  }
+  return v;
+};
+
+// 依 Δ（百分點）拆成相鄰兩個 25bp 目標區間的機率
+function rangeProbs(lowerBps, delta) {
+  const steps = delta / 0.25;
+  const k = Math.floor(steps + 1e-9);
+  const frac = Math.max(0, steps - k);
+  const out = [];
+  for (const [shift, p] of [[k, 1 - frac], [k + 1, frac]]) {
+    const lo = lowerBps + 25 * shift;
+    if (p > 1e-6) out.push({ range: `${lo}-${lo + 25}`, p: Number(p.toFixed(4)), shift, lo });
+  }
+  if (out.length === 0) throw new Error('機率計算結果為空');
+  if (out[0].lo < 0) throw new Error(`目標區間跌破 0（Δ=${delta}）`);
+  const summary = { ease: 0, no_change: 0, hike: 0 };
+  for (const o of out) summary[o.shift < 0 ? 'ease' : o.shift > 0 ? 'hike' : 'no_change'] += o.p;
+  for (const key of Object.keys(summary)) summary[key] = Number(summary[key].toFixed(4));
+  return { probabilities: out.map(({ range, p }) => ({ range, p })), summary };
+}
+
+async function fetchFedWatch() {
+  const today = etToday();
+  const { text: html } = await download(FOMC_URL, { 'User-Agent': UA }).catch((e) => {
+    throw new Error(`FOMC 日程頁 ${e.message}`);
+  });
+  const meetings = parseFomc(html);
+  const meeting = meetings.find((d) => d >= today);
+  if (!meeting) throw new Error(`FOMC 日程沒有 ${today} 之後的會議`);
+  const meetingMonths = new Set(meetings.map((d) => d.slice(0, 7)));
+  const [y, mo, dd] = meeting.split('-').map(Number);
+  const N = daysInMonth(y, mo);
+  const m = dd; // 決策日隔天生效 → 會前（舊利率）天數 = 決策日
+  const [ny, nm] = addMonth(y, mo, 1);
+  const [py, pm] = addMonth(y, mo, -1);
+  if (ny > Number(meetings.at(-1).slice(0, 4))) throw new Error(`FOMC 日程尚未列出 ${ny} 年會議，無法判斷下個月是否有會議`);
+  let method;
+  if (!meetingMonths.has(ymKey(ny, nm))) method = 'next_month';
+  else if (!meetingMonths.has(ymKey(py, pm)) && m < N) method = 'prev_month';
+  else throw new Error(`會議 ${meeting} 前後月份都有會議（或月底決策且下月有會議），單次會議算法不適用`);
+
+  const code = (yy, mm) => `ZQ${ZQ_CODES[mm - 1]}${String(yy).slice(-2)}`;
+  const mainC = code(y, mo);
+  const otherC = method === 'next_month' ? code(ny, nm) : code(py, pm);
+  const mainP = await fetchZq(mainC);
+  await sleep(DELAY_MS);
+  const otherP = await fetchZq(otherC);
+
+  const lower = await readTarget('DFEDTARL');
+  const upper = await readTarget('DFEDTARU');
+  // 目標區間資料不得早於上一場已生效的會議（避免用到會前的舊區間）
+  const prevMeeting = meetings.filter((d) => d < today).at(-1);
+  if (prevMeeting) {
+    const eff = shiftDate(prevMeeting, { days: 1 });
+    const lastL = lower.at(-1)[0];
+    if (lastL < eff && eff <= today) throw new Error(`DFEDTARL 最新 ${lastL} 早於上次會議生效日 ${eff}，請先更新 DFEDTARL／DFEDTARU`);
+  }
+
+  const common = [...mainP.keys()].filter((d) => otherP.has(d)).sort();
+  if (common.length === 0) throw new Error(`${mainC}／${otherC} 沒有共同交易日`);
+  const pickDate = (target) => {
+    const d = common.filter((x) => x <= target).at(-1);
+    if (!d) throw new Error(`${target} 之前沒有 ${mainC}／${otherC} 共同交易日（Yahoo range=3mo 不足）`);
+    return d;
+  };
+  const horizons = {
+    now: common.at(-1),
+    '1d': pickDate(shiftDate(today, { days: -1 })),
+    '1w': pickDate(shiftDate(today, { days: -7 })),
+    '1m': pickDate(shiftDate(today, { months: -1 })),
+  };
+
+  const r6 = (x) => Number(x.toFixed(6));
+  const probabilities = {};
+  const summary = {};
+  const inputs = { method, contracts: [mainC, otherC], meeting_month_days: N, days_before_effective: m, horizons: {} };
+  for (const [h, date] of Object.entries(horizons)) {
+    const pMain = mainP.get(date);
+    const pOther = otherP.get(date);
+    const avg = 100 - pMain;
+    const other = 100 - pOther;
+    let pre;
+    let post;
+    if (method === 'next_month') {
+      post = other;
+      pre = (avg * N - post * (N - m)) / m;
+    } else {
+      pre = other;
+      post = (avg * N - pre * m) / (N - m);
+    }
+    const delta = post - pre;
+    const lo = valueAsOf(lower, date);
+    const up = valueAsOf(upper, date);
+    if (lo == null || up == null) throw new Error(`${date} 找不到目標區間（DFEDTARL／DFEDTARU）`);
+    const target = { lower: Math.round(lo * 100), upper: Math.round(up * 100) };
+    if (target.upper - target.lower !== 25) throw new Error(`${date} 目標區間不是 25bp 寬：${target.lower}-${target.upper}`);
+    const r = rangeProbs(target.lower, delta);
+    probabilities[h] = r.probabilities;
+    summary[h] = r.summary;
+    inputs.horizons[h] = {
+      price_date: date,
+      prices: { [mainC]: pMain, [otherC]: pOther },
+      target,
+      avg: r6(avg),
+      pre: r6(pre),
+      post: r6(post),
+      delta: r6(delta),
+    };
+  }
+
+  return {
+    source: 'Yahoo Finance ZQ 期貨＋federalreserve.gov FOMC 日程，依 CME FedWatch 方法自算',
+    substitute: true,
+    reference_url: FEDWATCH_REF,
+    generated_at: new Date().toISOString(),
+    as_of: today,
+    price_date: horizons.now,
+    meeting: {
+      date: meeting,
+      effective: shiftDate(meeting, { days: 1 }),
+      contract: mainC,
+      expires: lastWeekday(y, mo),
+      price: mainP.get(horizons.now),
+    },
+    current_target: inputs.horizons.now.target,
+    probabilities,
+    summary,
+    inputs,
+  };
+}
+
+async function saveFedWatch() {
+  const out = await fetchFedWatch();
+  const content = JSON.stringify(out, null, 2) + '\n';
+  JSON.parse(content); // 寫檔前自我檢查
+  await writeAtomic(FEDWATCH_OUT, content);
+  const s = out.summary.now;
+  console.log(`OK   FEDWATCH（${out.meeting.date} 會議，${out.meeting.contract} ${out.meeting.price}，價格日 ${out.price_date}；降 ${s.ease}／不變 ${s.no_change}／升 ${s.hike}）`);
+}
+
 // ---- 由日期間距推斷頻率（取間距中位數，天）----
 function inferFrequency(obs) {
   if (obs.length < 2) return null;
@@ -452,7 +703,9 @@ async function main() {
   const catalog = JSON.parse(await readFile(CATALOG, 'utf8'));
   const all = collectSeries(catalog);
   const args = process.argv.slice(2);
-  const ids = args.length ? [...new Set(args)] : [...all.keys()];
+  // FEDWATCH 不是序列，是 data/fedwatch.json；不帶參數時在所有序列之後一起產生
+  const runFedWatch = args.length === 0 || args.includes('FEDWATCH');
+  const ids = args.length ? [...new Set(args.filter((a) => a !== 'FEDWATCH'))] : [...all.keys()];
   const fetchedAt = new Date().toISOString().slice(0, 10);
   await mkdir(OUT_DIR, { recursive: true });
 
@@ -513,6 +766,16 @@ async function main() {
       } catch (e) {
         fail(meta.id, e.message);
       }
+    }
+  }
+
+  // FEDWATCH：讀 data/series/DFEDTARL、DFEDTARU，所以放在序列之後；失敗不寫檔、不覆蓋舊檔
+  if (runFedWatch) {
+    try {
+      await saveFedWatch();
+      ok.push('FEDWATCH');
+    } catch (e) {
+      fail('FEDWATCH', e.message);
     }
   }
 
