@@ -1,0 +1,13 @@
+# 課程講義：檔案過大（>100MB）且未公開，不進版控
+Docs/Ref/*.pdf
+
+# Claude Code 本機狀態
+.claude/worktrees/
+.claude/scheduled_tasks.lock
+.claude/settings.local.json
+
+# 系統雜檔
+.DS_Store
+Thumbs.db
+desktop.ini
+node_modules/
