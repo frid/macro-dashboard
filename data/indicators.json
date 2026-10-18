@@ -1,0 +1,677 @@
+{
+  "version": 1,
+  "updated": "2026-10-18",
+  "categories": [
+    { "id": "C", "name_zh": "消費", "name_en": "Consumption" },
+    { "id": "I", "name_zh": "投資", "name_en": "Investment" },
+    { "id": "G", "name_zh": "政府", "name_en": "Government" },
+    { "id": "NX", "name_zh": "淨出口", "name_en": "Net Exports" },
+    { "id": "MC", "name_zh": "多重成分", "name_en": "Multiple Components" },
+    { "id": "IFU", "name_zh": "通膨／恐慌／不確定", "name_en": "Inflation, Fear & Uncertainty" }
+  ],
+  "recession": {
+    "series": "USREC",
+    "source": "FRED",
+    "note": "NBER 衰退期（1 = 衰退），用於圖上衰退陰影"
+  },
+  "indicators": [
+    {
+      "id": "auto-sales",
+      "category": "C",
+      "name_zh": "汽車銷售",
+      "name_en": "Automobile Sales",
+      "timing": "L",
+      "timing_note": "衰退時領先、復甦時同時／落後",
+      "frequency": "monthly",
+      "release": "每月第一個營業日",
+      "series": [
+        { "id": "TOTALSA", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "ALTSALES", "source": "FRED", "role": "compare", "substitute": false, "note": "輕型車銷售，講義圖用此序列" }
+      ],
+      "derived": ["qma", "yma", "yoy"],
+      "thresholds": [],
+      "rule": "看趨勢而非單月數字；新車銷售與租賃轉弱常是消費放緩的早期訊號。",
+      "pages": "K 8–10",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "consumer-sentiment",
+      "category": "C",
+      "name_zh": "消費者信心",
+      "name_en": "Consumer Sentiment",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "密大：每月第二個週五；CCI：每月最後一個週二",
+      "series": [
+        { "id": "UMCSENT", "source": "FRED", "role": "main", "substitute": false, "note": "密西根大學消費者信心；CCI 不在 FRED，待 DA-04" }
+      ],
+      "derived": ["yoy"],
+      "thresholds": [
+        { "value": 0, "label": "YoY 0 線" }
+      ],
+      "rule": "數字波動大，單月起落意義有限，要看一段時間的趨勢方向。",
+      "pages": "K 11–15",
+      "status": "ok",
+      "external": { "name": "Bloomberg CONCCONF（Conference Board CCI）", "note": "待 DA-04" }
+    },
+    {
+      "id": "underemployment",
+      "category": "C",
+      "name_zh": "就業不足",
+      "name_en": "Underemployment / Slack",
+      "timing": "L",
+      "timing_note": "衰退時領先、復甦時落後",
+      "frequency": "monthly",
+      "release": "每月第一個週五（就業報告）",
+      "series": [
+        { "id": "U6RATE", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "LNS12032194", "source": "FRED", "role": "compare", "substitute": false, "note": "因經濟因素兼職人數，講義雙軸對照" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "勞動力閒置上升代表景氣轉弱；復甦初期此指標反應慢，改看加班時數較即時。",
+      "pages": "K 16–20",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "jobless-claims",
+      "category": "C",
+      "name_zh": "失業救濟申請",
+      "name_en": "Unemployment Claims",
+      "timing": "C",
+      "timing_note": "同時→領先",
+      "frequency": "weekly",
+      "release": "每週四",
+      "series": [
+        { "id": "ICSA", "source": "FRED", "role": "main", "substitute": false, "note": "初領" },
+        { "id": "CCSA", "source": "FRED", "role": "compare", "substitute": false, "note": "續領" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "初領反映新增裁員、續領反映找工作的難度；兩者同步走高代表勞動市場轉差。",
+      "pages": "K 21–22",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "nonfarm-payrolls",
+      "category": "C",
+      "name_zh": "非農就業",
+      "name_en": "Nonfarm Payrolls (NFP)",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月第一個週五",
+      "series": [
+        { "id": "PAYEMS", "source": "FRED", "role": "main", "substitute": false, "note": "取月增減" },
+        { "id": "UNRATE", "source": "FRED", "role": "compare", "substitute": false, "note": "同份報告的失業率" },
+        { "id": "CES0500000003", "source": "FRED", "role": "compare", "substitute": false, "note": "同份報告的平均時薪" }
+      ],
+      "derived": ["mom_change", "yoy"],
+      "thresholds": [
+        { "value": 0, "label": "YoY 0 線" }
+      ],
+      "rule": "就業增加帶動生產與所得，進而推升消費；年增率跌破 0 歷來都與衰退同時出現。",
+      "pages": "K 23–26",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "beveridge-curve",
+      "category": "C",
+      "name_zh": "Beveridge 曲線",
+      "name_en": "Beveridge Curve",
+      "timing": "G",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月",
+      "series": [
+        { "id": "UNRATE", "source": "FRED", "role": "main", "substitute": false, "note": "失業率（X 軸）" },
+        { "id": "JTSJOR", "source": "FRED", "role": "compare", "substitute": false, "note": "職缺率（Y 軸），JOLTS 自 2000-12" }
+      ],
+      "derived": ["beveridge"],
+      "thresholds": [],
+      "rule": "以失業率對職缺率作散佈圖；曲線整體往外移，表示同樣職缺下失業較多，勞動市場媒合效率變差。",
+      "pages": "K 27–32",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "sahm-rule",
+      "category": "C",
+      "name_zh": "Sahm 規則",
+      "name_en": "Sahm Rule",
+      "timing": "G",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "隨每月就業報告",
+      "series": [
+        { "id": "SAHMREALTIME", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "SAHMCURRENT", "source": "FRED", "role": "compare", "substitute": false, "note": "講義圖同時畫出" },
+        { "id": "UNRATE", "source": "FRED", "role": "component", "substitute": false, "note": "可由失業率自算" }
+      ],
+      "derived": ["sahm"],
+      "thresholds": [
+        { "value": 0.5, "label": "衰退訊號 0.5" }
+      ],
+      "rule": "失業率三個月平均比過去 12 個月的最低點高出 0.5 個百分點以上，通常代表已進入衰退初期。",
+      "pages": "K 33–38",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "copper-price",
+      "category": "I",
+      "name_zh": "銅價",
+      "name_en": "Copper Price",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每營業日（FRED 序列為月資料）",
+      "series": [
+        { "id": "PCOPPUSDM", "source": "FRED", "role": "main", "substitute": false, "note": "月資料；LME／COMEX 日資料不在 FRED" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "銅廣泛用於製造、營建與基礎建設，價格漲跌被視為景氣的溫度計。",
+      "pages": "K 40–42",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "durable-goods",
+      "category": "I",
+      "name_zh": "耐久財訂單",
+      "name_en": "Durable Goods Orders",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "約每月 26 日",
+      "series": [
+        { "id": "DGORDER", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "NEWORDER", "source": "FRED", "role": "compare", "substitute": false, "note": "核心資本財（非國防、不含飛機）" },
+        { "id": "ACDGNO", "source": "FRED", "role": "compare", "substitute": false, "note": "消費性耐久財新訂單，講義雙軸對照" },
+        { "id": "PCEDG", "source": "FRED", "role": "compare", "substitute": false, "note": "PCE 耐久財，講義圖用" }
+      ],
+      "derived": ["yoy"],
+      "thresholds": [],
+      "rule": "總訂單會被軍艦、戰機等大額國防訂單扭曲，判讀企業投資意願應以核心資本財為主。",
+      "pages": "K 43–47",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "housing-permits-starts",
+      "category": "I",
+      "name_zh": "建照與新屋開工",
+      "name_en": "Housing Permits & Starts",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "約每月 16 日",
+      "series": [
+        { "id": "PERMIT", "source": "FRED", "role": "main", "substitute": false, "note": "建照" },
+        { "id": "HOUST", "source": "FRED", "role": "compare", "substitute": false, "note": "新屋開工" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "建商在看到需求回升時先申請建照、動工，因此常在景氣好轉前就先上升。",
+      "pages": "K 48–50",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "ism-manufacturing",
+      "category": "I",
+      "name_zh": "ISM 製造業 PMI",
+      "name_en": "ISM Manufacturing PMI",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月第一個營業日 10:00 ET",
+      "series": [],
+      "derived": null,
+      "thresholds": [
+        { "value": 50, "label": "擴張／收縮 50" }
+      ],
+      "rule": "高於 50 代表製造業擴張，低於 50 代表收縮。",
+      "pages": "K 51–55",
+      "status": "pending",
+      "external": { "name": "Bloomberg NAPMPMI Index", "note": "不在 FRED，待 DA-04" }
+    },
+    {
+      "id": "ism-services",
+      "category": "I",
+      "name_zh": "ISM 服務業 PMI",
+      "name_en": "ISM Services PMI",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月第三個營業日",
+      "series": [],
+      "derived": null,
+      "thresholds": [
+        { "value": 50, "label": "擴張／收縮 50" }
+      ],
+      "rule": "判讀方式與製造業 PMI 相同（50 為分界）；服務業約占 GDP 七成，對整體景氣代表性高。",
+      "pages": "K 56–59",
+      "status": "pending",
+      "external": { "name": "Bloomberg NAPMNMI Index", "note": "不在 FRED，待 DA-04" }
+    },
+    {
+      "id": "lme-inventories",
+      "category": "I",
+      "name_zh": "LME 金屬庫存",
+      "name_en": "LME Metal Inventories",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日",
+      "series": [],
+      "derived": null,
+      "thresholds": [],
+      "rule": "庫存與金屬價格通常反向變動；利率極低時持有庫存成本低，關係會被扭曲。",
+      "pages": "K 60–65",
+      "status": "pending",
+      "external": { "name": "Bloomberg LSAH／LSNI（LME 鋁／鎳庫存）", "note": "不在 FRED，待 DA-04" }
+    },
+    {
+      "id": "budget-deficit",
+      "category": "G",
+      "name_zh": "預算赤字與國債",
+      "name_en": "Budget Deficits & National Debt",
+      "timing": "C",
+      "timing_note": "同時→領先",
+      "frequency": "monthly",
+      "release": "財政部月報：每月第 8 個營業日",
+      "series": [
+        { "id": "MTSDS133FMS", "source": "FRED", "role": "main", "substitute": false, "note": "聯邦收支差額（月）" },
+        { "id": "FYFSGDA188S", "source": "FRED", "role": "compare", "substitute": false, "note": "收支差額占 GDP（年），赤字為負值" },
+        { "id": "GFDEBTN", "source": "FRED", "role": "compare", "substitute": false, "note": "聯邦總債務（季）" },
+        { "id": "GFDEGDQ188S", "source": "FRED", "role": "compare", "substitute": false, "note": "債務占 GDP（季）" }
+      ],
+      "derived": null,
+      "thresholds": [
+        { "value": -3, "label": "赤字占 GDP 3%（FYFSGDA188S = −3）" }
+      ],
+      "rule": "重點看赤字占 GDP 的比率而非金額；超過 3% 被視為財政壓力的關鍵線。",
+      "pages": "K 67–68",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "us-debt-leverage",
+      "category": "G",
+      "name_zh": "美國債務與槓桿",
+      "name_en": "U.S. Debt & Leverage",
+      "timing": null,
+      "timing_note": "講義未標時序（圖組）",
+      "frequency": "quarterly",
+      "release": "季資料（循環信用為月資料）",
+      "series": [
+        { "id": "GFDEBTN", "source": "FRED", "role": "main", "substitute": false, "note": "聯邦總債務" },
+        { "id": "HMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "住宅房貸" },
+        { "id": "MABSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "總房貸" },
+        { "id": "CMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "商業房貸" },
+        { "id": "SLOASM", "source": "FRED", "role": "compare", "substitute": false, "note": "學生貸款" },
+        { "id": "REVOLSL", "source": "FRED", "role": "compare", "substitute": false, "note": "循環信用（月）" },
+        { "id": "MVLOASM", "source": "FRED", "role": "compare", "substitute": false, "note": "汽車貸款" },
+        { "id": "GDP", "source": "FRED", "role": "component", "substitute": false, "note": "占 GDP 比的分母" }
+      ],
+      "derived": ["yoy", "ratio_gdp"],
+      "thresholds": [
+        { "value": 3, "label": "債務 YoY 3%" }
+      ],
+      "rule": "各類債務看水準、年增率、占 GDP 比及其年增率四個角度；每次衰退後債務累積的斜率都明顯變陡。",
+      "pages": "K 69–91",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "baltic-dry-index",
+      "category": "NX",
+      "name_zh": "波羅的海乾散貨指數",
+      "name_en": "Baltic Dry Index (BDI)",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日",
+      "series": [],
+      "derived": null,
+      "thresholds": [],
+      "rule": "反映乾散貨船即期租船價格，可看出全球原物料運輸需求；但新船大量下水也會壓低指數。",
+      "pages": "K 94–98",
+      "status": "pending",
+      "external": { "name": "Bloomberg BDIY", "note": "不在 FRED，待 DA-04" }
+    },
+    {
+      "id": "dollar-index",
+      "category": "NX",
+      "name_zh": "美元指數",
+      "name_en": "U.S. Dollar Index",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日",
+      "series": [
+        { "id": "DTWEXBGS", "source": "FRED", "role": "main", "substitute": true, "note": "替代：Fed 廣義美元指數，非 ICE DXY" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "衡量美元對一籃子貨幣的強弱；講義所用的 ICE DXY 中歐元權重約 57.6%。",
+      "pages": "K 99–102",
+      "status": "substitute",
+      "external": { "name": "ICE DXY（Yahoo）", "note": "不在 FRED，畫面改用替代序列" }
+    },
+    {
+      "id": "oil-inventories",
+      "category": "NX",
+      "name_zh": "原油庫存",
+      "name_en": "Crude Oil Inventories",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "weekly",
+      "release": "每週三（EIA）",
+      "series": [],
+      "derived": null,
+      "thresholds": [],
+      "rule": "看不含戰略儲備（SPR）的商業原油庫存變化，判斷供需鬆緊。",
+      "pages": "K 103–106",
+      "status": "pending",
+      "external": { "name": "Bloomberg DOESCRUD", "note": "FRED WCESTUS1 抓不到，改走 EIA API，待 DA-04" }
+    },
+    {
+      "id": "fed-funds-rate",
+      "category": "MC",
+      "name_zh": "聯邦基金利率",
+      "name_en": "Fed Funds Rate",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "FOMC 會議日",
+      "series": [
+        { "id": "DFF", "source": "FRED", "role": "main", "substitute": false, "note": "有效聯邦基金利率" },
+        { "id": "DFEDTARU", "source": "FRED", "role": "compare", "substitute": false, "note": "目標區間上限" },
+        { "id": "DFEDTARL", "source": "FRED", "role": "compare", "substitute": false, "note": "目標區間下限" },
+        { "id": "DGS10", "source": "FRED", "role": "compare", "substitute": false, "note": "10 年期公債殖利率，講義圖用" }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "二戰後每次衰退結束前，Fed 都曾大幅降息；降息循環的節奏可用來判斷景氣位置。",
+      "pages": "K 108–112",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "sofr",
+      "category": "MC",
+      "name_zh": "擔保隔夜融資利率",
+      "name_en": "Secured Overnight Financing Rate (SOFR)",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日 8:00 ET",
+      "series": [
+        { "id": "SOFR", "source": "FRED", "role": "main", "substitute": false }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "以美國公債為擔保的隔夜借款成本，反映短期資金市場鬆緊。",
+      "pages": "K 113–114",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "m2-money-supply",
+      "category": "MC",
+      "name_zh": "M2 貨幣供給",
+      "name_en": "M2 Money Supply",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每週四（延後兩週）",
+      "series": [
+        { "id": "M2SL", "source": "FRED", "role": "main", "substitute": false, "note": "月、季調" },
+        { "id": "WM2NS", "source": "FRED", "role": "compare", "substitute": false, "note": "週、未季調" },
+        { "id": "M2NS", "source": "FRED", "role": "compare", "substitute": false, "note": "月、未季調，講義圖用" }
+      ],
+      "derived": ["qma", "yma", "yoy"],
+      "thresholds": [],
+      "rule": "Fed 透過增減貨幣供給來刺激或降溫經濟；M2 年增率轉負代表資金明顯緊縮。",
+      "pages": "K 115–118",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "new-home-sales",
+      "category": "MC",
+      "name_zh": "新屋銷售",
+      "name_en": "New Home Sales",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "約次月後四週 10:00 ET",
+      "series": [
+        { "id": "HSN1F", "source": "FRED", "role": "main", "substitute": false }
+      ],
+      "derived": null,
+      "thresholds": [],
+      "rule": "簽約當下就計入，比成屋交易更早反映購屋需求，並帶動家具、家電等後續消費。",
+      "pages": "K 119–122",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "philly-fed",
+      "category": "MC",
+      "name_zh": "費城聯準會製造業調查",
+      "name_en": "Philadelphia Fed Manufacturing Survey",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月第三個週四",
+      "series": [
+        { "id": "GACDFSA066MSFRBPHI", "source": "FRED", "role": "main", "substitute": false, "note": "當前一般活動" }
+      ],
+      "derived": null,
+      "thresholds": [
+        { "value": 0, "label": "擴張／收縮 0" }
+      ],
+      "rule": "擴散指數大於 0 表示受訪廠商認為活動擴張，小於 0 表示收縮。",
+      "pages": "K 123–125",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "yield-curve",
+      "category": "MC",
+      "name_zh": "殖利率曲線",
+      "name_en": "Yield Curve",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日",
+      "series": [
+        { "id": "T10Y3M", "source": "FRED", "role": "main", "substitute": false, "note": "10 年 − 3 個月" },
+        { "id": "T10Y2Y", "source": "FRED", "role": "compare", "substitute": false, "note": "10 年 − 2 年" },
+        { "id": "T10Y2YM", "source": "FRED", "role": "compare", "substitute": false, "note": "10 年 − 2 年（月），講義圖用" }
+      ],
+      "derived": null,
+      "thresholds": [
+        { "value": 0, "label": "倒掛 0" }
+      ],
+      "rule": "長短天期利差跌破 0（倒掛）後，大約一年內發生衰退的機率明顯升高。",
+      "pages": "K 126–128",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "gold-price",
+      "category": "IFU",
+      "name_zh": "黃金",
+      "name_en": "Gold Price",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每營業日",
+      "series": [],
+      "derived": ["qma", "yma"],
+      "thresholds": [],
+      "rule": "金價是市場避險情緒的量尺；不安升高時資金傾向流入黃金。",
+      "pages": "K 130–131",
+      "status": "pending",
+      "external": { "name": "Bloomberg XAUUSD", "note": "LBMA 金價已自 FRED 下架，待 DA-04" }
+    },
+    {
+      "id": "cpi",
+      "category": "IFU",
+      "name_zh": "消費者物價指數",
+      "name_en": "Consumer Price Index (CPI)",
+      "timing": "L",
+      "timing_note": "衰退時領先、擴張時同時",
+      "frequency": "monthly",
+      "release": "每月中",
+      "series": [
+        { "id": "CPIAUCSL", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "CPILFESL", "source": "FRED", "role": "compare", "substitute": false, "note": "核心（去食品能源）" },
+        { "id": "CPIAUCNS", "source": "FRED", "role": "compare", "substitute": false, "note": "未季調，講義圖用" }
+      ],
+      "derived": ["qma", "yma", "yoy"],
+      "thresholds": [],
+      "rule": "以固定籃子（Laspeyres）計算的物價水準，判讀以年增率為主，並對照核心 CPI 看通膨是否擴散。",
+      "pages": "K 132–156",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "ppi",
+      "category": "IFU",
+      "name_zh": "生產者物價指數",
+      "name_en": "Producer Price Index (PPI)",
+      "timing": "L",
+      "timing_note": "衰退時領先、擴張時同時",
+      "frequency": "monthly",
+      "release": "約每月中 8:30 ET",
+      "series": [
+        { "id": "PPIFIS", "source": "FRED", "role": "main", "substitute": false, "note": "最終需求" },
+        { "id": "PPIACO", "source": "FRED", "role": "compare", "substitute": false, "note": "全商品，講義圖用" }
+      ],
+      "derived": ["qma", "yma", "yoy"],
+      "thresholds": [],
+      "rule": "生產端價格會往下游傳導；看去除食品與能源後的核心趨勢較不受短期波動干擾。",
+      "pages": "K 157–177",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "pce-price-index",
+      "category": "IFU",
+      "name_zh": "PCE 物價指數",
+      "name_en": "PCE Price Index",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "monthly",
+      "release": "每月（BEA）",
+      "series": [
+        { "id": "PCEPI", "source": "FRED", "role": "main", "substitute": false },
+        { "id": "PCEPILFE", "source": "FRED", "role": "compare", "substitute": false, "note": "核心" }
+      ],
+      "derived": ["yoy"],
+      "thresholds": [],
+      "rule": "Fed 2% 通膨目標所採用的物價指標，判讀以核心 PCE 年增率為主。",
+      "pages": "K 178–182",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "credit-spreads",
+      "category": "IFU",
+      "name_zh": "信用利差",
+      "name_en": "Credit Spreads",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每日",
+      "series": [
+        { "id": "DBAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Baa 殖利率" },
+        { "id": "DAAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Aaa 殖利率" },
+        { "id": "BAMLC0A4CBBB", "source": "FRED", "role": "compare", "substitute": false, "note": "BBB OAS" },
+        { "id": "BAA10YM", "source": "FRED", "role": "compare", "substitute": false, "note": "Baa 減 10 年公債（月），講義圖用" }
+      ],
+      "derived": ["spread:DBAA-DAAA"],
+      "thresholds": [],
+      "rule": "低評等與高評等公司債的利差擴大，代表市場要求更高的違約風險補償，常出現在景氣放緩之前。",
+      "pages": "K 183–185",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "ted-spread",
+      "category": "IFU",
+      "name_zh": "TED 利差",
+      "name_en": "TED Spread",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每日",
+      "series": [
+        { "id": "SOFR", "source": "FRED", "role": "component", "substitute": true, "note": "替代：TEDRATE 已於 2022-01 停更" },
+        { "id": "DTB3", "source": "FRED", "role": "component", "substitute": true, "note": "替代：3 個月國庫券" }
+      ],
+      "derived": ["spread:SOFR-DTB3"],
+      "thresholds": [],
+      "rule": "銀行間借款利率與國庫券利率之差，衡量銀行體系的信用風險；利差擴大是金融壓力的警訊。",
+      "pages": "K 186–187",
+      "status": "substitute",
+      "external": null
+    },
+    {
+      "id": "tips-spread",
+      "category": "IFU",
+      "name_zh": "TIPS 利差（預期通膨）",
+      "name_en": "TIPS Spread (Breakeven Inflation)",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每日",
+      "series": [
+        { "id": "T10YIE", "source": "FRED", "role": "main", "substitute": false, "note": "10 年損益兩平通膨率" },
+        { "id": "T10YIEM", "source": "FRED", "role": "compare", "substitute": false, "note": "月資料，講義圖用" }
+      ],
+      "derived": null,
+      "thresholds": [
+        { "value": 2, "label": "損益兩平通膨 2%" }
+      ],
+      "rule": "10 年公債與 TIPS 殖利率之差即市場預期通膨；低於 2% 時 Fed 升息的壓力較小。",
+      "pages": "K 188–190",
+      "status": "ok",
+      "external": null
+    },
+    {
+      "id": "vix",
+      "category": "IFU",
+      "name_zh": "VIX 恐慌指數",
+      "name_en": "CBOE Volatility Index (VIX)",
+      "timing": "L",
+      "timing_note": null,
+      "frequency": "daily",
+      "release": "每日",
+      "series": [
+        { "id": "VIXCLS", "source": "FRED", "role": "main", "substitute": false }
+      ],
+      "derived": null,
+      "thresholds": [
+        { "value": 12, "label": "低波動 12" },
+        { "value": 20, "label": "高波動 20" },
+        { "value": 30, "label": "恐慌 30" }
+      ],
+      "rule": "數值越高代表市場越焦慮；單日急升到極端水準時，事後常是相對的買點。",
+      "pages": "K 191–193",
+      "status": "ok",
+      "external": null
+    }
+  ]
+}

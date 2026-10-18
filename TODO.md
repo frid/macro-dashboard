@@ -8,7 +8,6 @@
 # 專案設定
 
 # 資料
-- [ ] DA-01 指標目錄 `data/indicators.json`：依 `doc/reference/指標清單.md` 建立（分類、領先／同時／落後、來源、序列代碼、頻率、公布時間、判讀規則、講義頁碼）
 - [ ] DA-02 抓資料腳本 `tools/fetch-data.mjs`（Node 24、零套件）：從 FRED 公開 CSV 抓序列 → `data/series/<ID>.json`；含 NBER 衰退期 `USREC`
 - [ ] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
 - [ ] DA-04 非 FRED 指標處理：ISM 製造業／服務業 PMI、Conference Board CCI、BDI、ICE 美元指數、LME 庫存、黃金、EIA 原油庫存
@@ -35,6 +34,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-01 指標目錄 `data/indicators.json`：32 個指標（C 7／I 6／G 2／NX 3／MC 6／IFU 8）＋NBER 衰退期 `USREC`，格式定案寫入 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
 - [x] SU-02 技術選型定案：單檔 `index.html`＋`data/*.json`，圖表庫 Apache ECharts 6.1.0（cdnjs＋SRI），決策紀錄 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
 - [x] SU-01 建立 GitHub repo 與 GitHub Pages 部署：公開 repo `frid/macro-dashboard`，Pages 從 `main` 根目錄發佈 <https://frid.github.io/macro-dashboard/>（完成 2026-10-18）
 - [x] SU-03 講義圖片頁整理（約 115 頁圖表），寫成 `doc/reference/郭維裕講義-圖表頁摘要.md`，並回填 `doc/reference/指標清單.md`（完成 2026-10-18）
