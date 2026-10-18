@@ -16,6 +16,10 @@
 - [ ] DA-07 G 區債務圖組：抓 `GFDEBTN`、`HMLBSHNO`、`MABSHNO`、`CMLBSHNO`、`SLOASM`、`REVOLSL`、`MVLOASM`、`GDP`，算 YoY 與占 GDP 比 [K 69–91]
 - [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日；TradingView 序列（`TV_*`）`last_updated` 為 null，一律用最後一筆觀測日
 - [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
+- [ ] DA-10 日資料改用即時來源（FRED 日資料約落後 1–2 個營業日，例：2026-10-16 VIX 收 19.99，FRED `VIXCLS` 只到 10-15 的 16.46）
+  - VIX：主序列改 Yahoo `^VIX`，FRED `VIXCLS` 留作對照
+  - 其他 FRED 日資料也改用即時來源：`DFF`／`DFEDTARU`／`DFEDTARL`（聯邦基金利率）、`DGS10`、`SOFR`、`T10Y3M`／`T10Y2Y`（期限利差）、`DBAA`／`DAAA`、`BAMLC0A4CBBB`（信用利差）、`DTB3`、`T10YIE`（損益兩平通膨）、`DTWEXBGS`；逐一找可用來源，找不到即時來源的維持 FRED 並在畫面註明延遲
+  - 換來源後的序列與 FRED 原序列做一致性比對（同 DA-04 做法）；用 Yahoo 等非官方來源時依 CLAUDE.md 註明
 
 # 畫面
 - [ ] UI-02 指標詳細圖：點卡片展開，照講義格式「原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影」，下方配 YoY 圖；門檻線（PMI 50、Sahm 0.5、Philly Fed 0、期限利差 0、債務 YoY 3%、損益兩平通膨 2%、VIX 12／20／30、YoY 0 線）；支援雙軸對照（如初領 vs 續領）
