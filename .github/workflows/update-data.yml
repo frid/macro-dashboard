@@ -1,0 +1,118 @@
+# DA-03：每日抓取資料並 commit
+# - 資料 commit 到 main（GitHub Pages 從 main 發佈），再用 --no-ff 合回 dev，避免日後 dev → main release 時資料檔衝突。
+# - bot 只 add data/，不碰其他檔。
+# - 只有 main 分支上的執行會 commit；其他分支手動觸發時只跑不 commit。
+# - 單一來源抓取失敗時保留舊檔，其餘照常；有失敗時 job 最後標失敗以通知，但資料 commit 仍會完成。
+name: update-data
+
+on:
+  schedule:
+    - cron: "30 22 * * *" # UTC 22:30 = 台灣 06:30
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash # 明確指定才會啟用 pipefail，讓 `node ... | tee` 的失敗不被 tee 吃掉
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4.4.0
+        with:
+          node-version: "24"
+
+      - name: 抓取序列（fetch-data）
+        id: fetch
+        continue-on-error: true
+        run: node tools/fetch-data.mjs 2>&1 | tee fetch.log
+
+      - name: 計算衍生序列（derive-data）
+        id: derive
+        continue-on-error: true
+        run: node tools/derive-data.mjs 2>&1 | tee derive.log
+
+      - name: 結果摘要
+        if: always()
+        run: |
+          touch fetch.log derive.log
+          {
+            echo "## 資料更新結果"
+            echo
+            echo "- fetch-data：${{ steps.fetch.outcome }}"
+            echo "- derive-data：${{ steps.derive.outcome }}"
+            echo "- 分支：${GITHUB_REF_NAME}"
+            echo
+            echo "### FAIL 行"
+            echo '```'
+            grep -h '^FAIL' fetch.log derive.log || echo "（無）"
+            echo '```'
+            echo
+            echo "### TradingView 結果"
+            echo '```'
+            grep -h 'TV_\|TradingView' fetch.log || echo "（log 中沒有 TradingView 相關行）"
+            echo '```'
+            echo
+            echo "### 更新統計"
+            echo '```'
+            grep -h '^序列：\|^updated ' fetch.log derive.log || echo "（無）"
+            echo '```'
+            if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+              echo
+              echo "> 測試模式未 commit（只有 main 分支上的執行才會 commit 資料）。"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: commit 資料到 main
+        id: commit
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git add data/
+          if git diff --cached --quiet; then
+            echo "資料沒有變動，略過 commit。"
+            echo "committed=false" >> "$GITHUB_OUTPUT"
+            echo "> 資料沒有變動，未 commit。" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          DAY=$(TZ=Asia/Taipei date +%F)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "data: 每日資料更新 ${DAY}"
+          git push origin HEAD:main
+          echo "committed=true" >> "$GITHUB_OUTPUT"
+          echo "day=${DAY}" >> "$GITHUB_OUTPUT"
+          echo "> 已 commit 並 push main：data: 每日資料更新 ${DAY}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 把 main 合回 dev
+        id: merge
+        if: github.ref == 'refs/heads/main' && steps.commit.outputs.committed == 'true'
+        continue-on-error: true
+        run: |
+          git fetch origin main dev
+          git checkout -b dev origin/dev
+          if git merge --no-ff origin/main -m "Merge main 進 dev：每日資料更新 ${{ steps.commit.outputs.day }}"; then
+            git push origin dev
+            echo "> 已把 main 合回 dev 並 push。" >> "$GITHUB_STEP_SUMMARY"
+          else
+            git merge --abort
+            echo "> **main 合回 dev 衝突**，已 abort、未 push dev。請手動合併 main 進 dev。" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+      - name: 有失敗時讓 job 失敗（以便收到通知）
+        if: always() && (steps.fetch.outcome == 'failure' || steps.derive.outcome == 'failure' || steps.merge.outcome == 'failure')
+        run: |
+          echo "fetch：${{ steps.fetch.outcome }}／derive：${{ steps.derive.outcome }}／merge dev：${{ steps.merge.outcome }}"
+          exit 1

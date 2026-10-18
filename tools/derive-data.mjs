@@ -365,6 +365,18 @@ async function writeAtomic(file, content) {
   }
 }
 
+// 數據沒變就不重寫檔（DA-03）：舊檔存在且除 ignoreKeys（抓取時間類欄位）外內容相同 → 回傳 false，不寫檔
+async function writeIfChanged(file, content, ignoreKeys) {
+  try {
+    const strip = (o) => JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k]) => !ignoreKeys.includes(k))));
+    if (strip(JSON.parse(await readFile(file, 'utf8'))) === strip(JSON.parse(content))) return false;
+  } catch {
+    // 舊檔不存在或無法解析 → 照常寫入
+  }
+  await writeAtomic(file, content);
+  return true;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const unknown = args.filter((a) => !DEFS.some((d) => d.id === a));
@@ -390,6 +402,8 @@ async function main() {
 
   const ok = [];
   const failed = [];
+  const updated = [];
+  const unchanged = [];
   for (const def of defs) {
     try {
       const s = {};
@@ -417,12 +431,13 @@ async function main() {
       };
       const content = serialize(out);
       JSON.parse(content); // 寫檔前自我檢查
-      await writeAtomic(path.join(OUT_DIR, `${def.id}.json`), content);
+      const changed = await writeIfChanged(path.join(OUT_DIR, `${def.id}.json`), content, ['fetched_at']);
       ok.push(def.id);
+      (changed ? updated : unchanged).push(def.id);
       const first = observations[0];
       const last = observations.at(-1);
       const chk = check ? `；check ${JSON.stringify(check)}` : '';
-      console.log(`OK   ${def.id}（${observations.length} 筆，${first[0]}～${last[0]}，最新 ${JSON.stringify(last.slice(1))}${chk}）`);
+      console.log(`${changed ? 'OK  ' : 'SAME'} ${def.id}${changed ? '' : '（unchanged）'}（${observations.length} 筆，${first[0]}～${last[0]}，最新 ${JSON.stringify(last.slice(1))}${chk}）`);
     } catch (e) {
       failed.push({ id: def.id, reason: e.message });
       console.error(`FAIL ${def.id}：${e.message}`);
@@ -430,6 +445,7 @@ async function main() {
   }
 
   console.log(`\n成功 ${ok.length}：${ok.join(' ')}`);
+  console.log(`updated ${updated.length}／unchanged ${unchanged.length}／FAIL ${failed.length}`);
   if (failed.length) {
     console.log(`失敗 ${failed.length}：`);
     for (const f of failed) console.log(`  ${f.id}：${f.reason}`);

@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.17.0 — 2026-10-18
+- DA-03 GitHub Actions 每日資料更新：新增 `.github/workflows/update-data.yml`（排程 UTC 22:30＝台灣 06:30＋手動觸發，Node 24，`actions/checkout@v4.2.2`、`actions/setup-node@v4.4.0`），fetch／derive 個別失敗保留舊檔、job 標失敗通知；只在 `main` 上以 bot commit `data/`，再 `--no-ff` 合回 `dev`（衝突則 abort 不 push）；`fetch-data.mjs`／`derive-data.mjs` 新增 `writeIfChanged`，除 `fetched_at`／`generated_at` 外內容相同就不寫檔；雲端實測 TradingView WebSocket 可連、FAIL 0；README、SU-02 決策檔、CLAUDE.md（bot 寫 `main` 例外）同步
+
 ## 0.16.1 — 2026-10-18
 - UI-06 頁尾分開顯示「版本／網站更新／資料抓取」：資料抓取日取頁面已載入序列 `fetched_at` 的最大值（不多抓檔，`fedwatch.json` 待 UI-17 讀入時再納入）；版號改讀根目錄 `VERSION`（符合 SemVer 才覆寫，讀不到沿用頁尾寫死值）；資料來源與講義出處聲明已由 UI-09 完成
 
