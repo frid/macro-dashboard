@@ -18,6 +18,7 @@
 - **使用者明確說「merge」才可以合併回 `main`。** 在那之前只能 commit／push 分支。
 - `Docs/Ref/*.pdf` 不進版控（檔案超過 GitHub 100MB 上限，且為課程講義未公開）。
 - 不 force push、不 push `main`（merge 由使用者明確指示後才做）。
+- **已知限制**：專案在 Google Drive 掛載路徑（`/mnt/g`），WSL 下凡是寫 `.git/config` 的指令都會報 `chmod on .git/config.lock failed`（`git config`、`push -u` 設上游、刪分支時的設定清理）。commit、branch、worktree 正常。要改設定就在 Windows 端的 git 做，或把設定寫在指令列（`git -c key=value …`）；push 用 `git push origin <branch>`，不要依賴 `-u`。
 
 ## 版本
 
