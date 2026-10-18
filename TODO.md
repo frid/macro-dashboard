@@ -37,13 +37,16 @@
 - [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
   - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
+- [ ] UI-15 每個指標細項說明「指標內容、資料來源、判斷標準」（放在 UI-02 展開的細項面板，依賴 UI-02）
+  - 指標內容：`indicators.json` 每個指標新增 `description`（依講義用自己的話摘要，附 `[K 頁碼]`）
+  - 資料來源取自 `series[]`（替代要註明）；判斷標準取自 `rule`／`thresholds`／`signal`
 
 # 文件
-- [ ] DC-01 README：用途、線上網址、資料來源、如何本機更新資料
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
 - [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）
+- [x] DC-01 README：資料來源依 FRED／Yahoo／EIA／TradingView／衍生序列列出序列代碼、替代與無公開資料指標、各來源條款；更新資料步驟（Node 24、fetch→derive、失敗不覆蓋）、本機預覽、專案結構（完成 2026-10-18）
 - [x] UI-02 指標詳細圖：點卡片（或鍵盤 Enter／Space）開 `<dialog>`，照講義格式畫原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影，下方 YoY 圖；`thresholds[]` 畫門檻虛線（新增 `on:"yoy"`、`series` 欄位），`series[].axis` 支援雙軸對照（初領／續領、U6／兼職、耐久財、房貸）；lttb 降取樣＋上下圖連動縮放（預設近 20 年）；`?detail=<id>` 直接開啟（完成 2026-10-18）
 - [x] DA-07 G 區債務圖組：抓 `GFDEBTN`、`HMLBSHNO`、`MABSHNO`、`CMLBSHNO`、`SLOASM`、`REVOLSL`、`MVLOASM`、`GDP`，算 YoY 與占 GDP 比 [K 69–91]：21 個衍生序列（YoY、占 GDP 比、占 GDP 比 YoY）寫入 `data/derived/`（完成 2026-10-18）
 - [x] UI-14 頁首 Banner 改用弗里德里希〈霧海上的旅人〉（c. 1818，公有領域，Wikimedia Commons），全站配色改用畫中色票（霧灰、岩褐、灰藍、赭）；Banner 標註出處；深色模式留給 UI-07（完成 2026-10-18）
