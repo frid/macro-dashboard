@@ -26,7 +26,6 @@
 - [ ] UI-10 替代的指標要註明、沒有列出的也要註明
   - 資料層 DA-04 已標好（`substitute`、`unavailable`、`series[].note`），本項是畫面顯示
   - UI-01 留下：SOFR 卡因 `SOFR.json` substitute=true 也顯示「替代」，但 SOFR 本身是 MC 指標主序列，確認是否該標
-- [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
   - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
 - [ ] UI-15 每個指標細項說明「指標內容、資料來源、判斷標準」（放在 UI-02 展開的細項面板，依賴 UI-02）
@@ -40,6 +39,7 @@
 
 ## Complete
 - [x] DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`，解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約，依 CME FedWatch 方法自算最近一場會議的目標區間機率（Now／1D／1W／1M）寫入 `data/fedwatch.json`（替代，2026-10-28 會議 84.5／15.5 與 CME 一致）；`fed-funds-rate` 的 `external` 加 CME 連結 `url`；畫面另開 UI-17（完成 2026-10-18）
+- [x] UI-12 卡片數值細修：`indicators.json` series[] 加 `unit`（百萬美元／十億美元／%／指數／千人等 68 序列）；卡片數值與變動帶單位，百萬美元換算成億／兆美元並註原始單位；% 類序列變動改「個百分點」；raw 卡只在前值與現值皆 > 0 時才附 % 變動（修 Sahm -0.07→0 顯示 ▲100%）；詳細圖 caption／Y 軸名稱／tooltip 加單位（完成 2026-10-18）
 - [x] UI-11 每個指標卡片與總覽加 G／Y／R 燈號：門檻型（raw／yoy）訊號擴張 G、中性 Y、跨門檻 R，趨勢型轉弱只到 Y；新增 `light` 欄位補判預算赤字（赤字占 GDP > 3% → R）、債務 YoY > 3%、PCE 年增率 > 2%、TIPS 損益兩平 ≥ 2%（Y）；總覽加燈號統計，`data/derived/` 可直接讀（完成 2026-10-18）
 - [x] DA-10 日資料改用即時來源：VIX 主序列改 Cboe 官方 CSV（`CBOE_VIX`，`VIXCLS` 留作對照）；10 年期公債、3 個月國庫券改為 FRED 歷史接上美國財政部最新日（`UST_DGS10`、`UST_DTB3`），皆比 FRED 早 1 個營業日、重疊期間 100% 相同；T10Y3M／T10Y2Y／T10YIE、DFF／SOFR、目標區間已與官方同步，DBAA／DAAA／BAMLC0A4CBBB／DTWEXBGS 無免費即時來源，維持 FRED 並以 `lag` 在畫面註明延遲；比對紀錄見 DA-04 決策檔（完成 2026-10-18）
 - [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）
