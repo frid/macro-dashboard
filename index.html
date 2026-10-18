@@ -300,7 +300,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
-<footer>版本 <span id="app-version">0.15.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.16.1</span> ・ 網站更新 <span id="last-updated">2026-10-18</span> ・ 資料抓取 <span id="data-fetched">…</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -338,6 +338,29 @@ function sourceText(ids, defOf) {
 }
 const TIMING = { L: '領先', C: '同時', G: '落後' };
 
+// UI-06 頁尾「資料抓取」：載入序列時記下 fetched_at（YYYY-MM-DD）最大值，不另外多抓檔案
+// （data/fedwatch.json 目前頁面未讀取，待 UI-17 讀入時再納入 generated_at）
+let maxFetched = '';
+function noteFetched(d) {
+  const f = d && typeof d.fetched_at === 'string' ? d.fetched_at.slice(0, 10) : '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(f) && f > maxFetched) maxFetched = f;
+}
+function showFetched() {
+  const n = document.getElementById('data-fetched');
+  if (n) n.textContent = maxFetched || '未知';  // 已驗證為日期格式，textContent 不需 esc
+}
+// UI-06 版號：讀根目錄 VERSION，成功且符合 SemVer 才覆寫；失敗保留頁尾寫死值
+async function syncVersion() {
+  try {
+    const r = await fetch('VERSION', { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const v = (await r.text()).trim();
+    if (!/^\d+\.\d+\.\d+$/.test(v)) throw new Error('格式不符');
+    const n = document.getElementById('app-version');
+    if (n) n.textContent = v;
+  } catch (e) { console.warn('VERSION 讀取失敗，沿用頁尾寫死值：', e.message); }
+}
+
 const seriesCache = new Map();
 function loadSeries(id) {
   if (!seriesCache.has(id)) {
@@ -346,7 +369,8 @@ function loadSeries(id) {
     seriesCache.set(id, fetch(url).then(r => {
       if (!r.ok) throw new Error(url + ' 讀取失敗（HTTP ' + r.status + '）');
       return r.json();
-    }).catch(e => { throw new Error(url + '：' + e.message); }));
+    }).then(d => { noteFetched(d); return d; })
+      .catch(e => { throw new Error(url + '：' + e.message); }));
   }
   return seriesCache.get(id);
 }
@@ -1064,6 +1088,7 @@ function initDetailDialog() {
 }
 
 async function main() {
+  syncVersion();
   const app = document.getElementById('app');
   let cat;
   try {
@@ -1108,6 +1133,8 @@ async function main() {
       }));
     }
   }
+  await Promise.allSettled(jobs);
+  showFetched();  // UI-06：所有卡片（含失敗）載入完才算資料抓取日
   await Promise.all(jobs);
   fillSummary(summary, cat.indicators, await sigJob, await lightJob);
 }
