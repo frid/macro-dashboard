@@ -113,3 +113,44 @@ TradingView 實測代碼（未登入，`unauthorized_user_token`）：
 待查（不擋實作）：ISM 製造業 2007–2020 年 TradingView 與 MacroMicro 不同，需以 ISM 官網歷史表核對哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明「首次公布值」。
 
 版號：0.3.0 → 0.4.0（MINOR）。派工：worker-opus 實作、verifier-sonnet 驗證。
+
+## DA-10 即時來源（2026-10-18）
+
+起因：FRED 的日資料多半落後 1–2 個營業日。例：2026-10-16（週五）VIX 收 19.99，10-18 抓取時 FRED `VIXCLS` 只到 10-15 的 16.46。逐一找官方即時來源，找不到的維持 FRED，並在畫面來源列註明延遲（`series[].lag`）。
+
+### 各序列來源決定
+
+| 序列 | 用在 | 決定 | 新序列 | 理由 |
+|---|---|---|---|---|
+| `VIXCLS` | VIX [K 191–193] | **改用 Cboe 官方 CSV**；`VIXCLS` 降為對照（加 `lag`） | `CBOE_VIX`（main、`signal.series`） | Cboe 收盤當晚就更新，FRED 晚 1 天；1990 起全期間與 `VIXCLS` 一致 |
+| `DGS10` | 聯邦基金利率對照 [K 108–112] | **FRED 歷史＋美國財政部補最新日** | `UST_DGS10`（compare） | 財政部 yield curve CSV 當天傍晚更新；`DGS10` 本來就取自財政部，重疊日完全相同 |
+| `DTB3` | TED 利差成分 [K 186–187] | **FRED 歷史＋美國財政部補最新日** | `UST_DTB3`（component，仍標替代） | 財政部 bill rates CSV 的 `13 WEEKS BANK DISCOUNT`（貼現率）＝`DTB3`；同上 |
+| `T10Y3M`、`T10Y2Y`、`T10YIE` | 期限利差、TIPS 利差 | 維持 FRED，不註記 | — | 實測 FRED 已更新到 10-16，與財政部同日 |
+| `DFF`、`SOFR` | 聯邦基金利率、SOFR、TED 利差 | 維持 FRED，註記「官方次一營業日公布」 | — | NY Fed 官方本來就在次一營業日早上公布，FRED 同步，沒有更快的來源 |
+| `DFEDTARU`、`DFEDTARL` | 聯邦基金利率對照 | 維持 FRED，不註記 | — | 只在 FOMC 調整時變動，延遲不影響判讀 |
+| `DBAA`、`DAAA`、`BAMLC0A4CBBB` | 信用利差 | 維持 FRED，註記「FRED 約落後 1 個營業日」 | — | Moody's、ICE BofA 原始資料沒有免費即時來源 |
+| `DTWEXBGS` | 美元指數對照 | 維持 FRED，註記「Fed H.10 每週公布」 | — | Fed H.10 每週公布一次整週的日資料，FRED 已同步 |
+
+舊的 `VIXCLS`／`DGS10`／`DTB3` 序列檔保留。`VIXCLS` 仍在目錄（對照）；`DGS10`、`DTB3` 已不在目錄，全量抓取不再更新這兩個檔（`UST_*` 抓取時直接讀 FRED，不依賴這兩個檔）。`tools/derive-data.mjs` 不用這三個序列，不受影響。
+
+### 一致性比對（2026-10-18 實算）
+
+做法同第 2 節：取兩邊都有值的日期逐日比較（差距 < 1e-9 視為相等）。
+
+| 比對 | 重疊期間 | 重疊天數 | 完全相等 | 最大絕對差 | 新來源比 FRED 多出 |
+|---|---|---|---|---|---|
+| Cboe `VIX` CLOSE vs FRED `VIXCLS` | 1990-01-02～2026-10-15 | 9,295 | 100% | 0 | 2026-10-16 = 19.99 |
+| 財政部 `10 Yr` vs FRED `DGS10` | 2016-01-04～2026-10-15 | 2,697 | 100% | 0 | 2026-10-16 = 5.09 |
+| 財政部 `13 WEEKS BANK DISCOUNT` vs FRED `DTB3` | 2016-01-04～2026-10-15 | 2,697 | 100% | 0 | 2026-10-16 = 4.08 |
+| `UST_DGS10` 序列檔 vs `DGS10` | 1970-01-02～2026-10-15 | 14,188 | 100% | 0 | 2026-10-16 = 5.09 |
+| `UST_DTB3` 序列檔 vs `DTB3` | 1970-01-02～2026-10-15 | 14,188 | 100% | 0 | 2026-10-16 = 4.08 |
+
+- 財政部比對範圍取 2016–2026 年（11 個年度 CSV）；重疊期間內兩邊的日期集合完全相同。
+- `VIXCLS` 有 1 天 Cboe 沒有：1999-12-31（FRED 有值、Cboe 歷史檔沒有這天），其餘日期集合相同。`CBOE_VIX` 不補這天。
+- `UST_*` 序列檔的重疊日以 FRED 為準，所以必然相同；這兩列只是確認接合沒有出錯。
+
+### 實作摘要
+
+- `tools/fetch-data.mjs` 新增 `CBOE`、`UST` 兩個來源（格式見 `SU-02-技術選型.md`）。`UST`：先抓 FRED `fredBase` 完整歷史，再抓財政部「FRED 最後有值日所在年」到今年的 CSV，只接上晚於 FRED 最後有值日的日子。財政部或 FRED 任一邊失敗 → 整個序列失敗、不覆寫舊檔、結束碼 1（不退回只用 FRED，避免靜默變回延遲資料）。
+- `data/indicators.json`：VIX 主序列與 `signal.series` 改 `CBOE_VIX`；聯邦基金利率對照改 `UST_DGS10`；TED 利差成分、`derived`、`signal.minus` 改 `UST_DTB3`（保留替代標示）；延遲序列加 `lag`。
+- `index.html`：TED 利差的利差規則改 `UST_DTB3`；來源名稱加 `CBOE`（Cboe）、`UST`（FRED＋美國財政部）；卡片與詳細圖的來源列在有 `lag` 的序列後加「（延遲：…）」。

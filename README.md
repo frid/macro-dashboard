@@ -45,7 +45,7 @@
 | 預算赤字與國債 | MTSDS133FMS、FYFSGDA188S、GFDEBTN、GFDEGDQ188S |
 | 美國債務與槓桿 | GFDEBTN、HMLBSHNO、MABSHNO、CMLBSHNO、SLOASM、REVOLSL、MVLOASM、GDP |
 | 美元指數 | DTWEXBGS（Fed 廣義美元，非 DXY） |
-| 聯邦基金利率 | DFF、DFEDTARU、DFEDTARL、DGS10 |
+| 聯邦基金利率 | DFF、DFEDTARU、DFEDTARL、UST_DGS10（FRED DGS10＋美國財政部最新日） |
 | SOFR | SOFR |
 | M2 貨幣供給 | M2SL、WM2NS、M2NS |
 | 新屋銷售 | HSN1F |
@@ -55,9 +55,9 @@
 | PPI | PPIFIS、PPIACO |
 | PCE 物價指數 | PCEPI、PCEPILFE |
 | 信用利差 | DBAA、DAAA、BAMLC0A4CBBB、BAA10YM |
-| TED 利差 | SOFR、DTB3（**替代**：TEDRATE 已於 2022-01 停更） |
+| TED 利差 | SOFR、UST_DTB3（**替代**：TEDRATE 已於 2022-01 停更） |
 | TIPS 利差 | T10YIE、T10YIEM |
-| VIX 恐慌指數 | VIXCLS |
+| VIX 恐慌指數 | CBOE_VIX（Cboe 官方；對照 FRED VIXCLS） |
 | 衰退期（圖上陰影） | USREC（NBER） |
 
 ### Yahoo Finance（非官方）
@@ -100,7 +100,7 @@ TradingView 圖表資料的取得方式為非官方協定，僅供學習使用�
 | 消費者信心 | FRED `UMCSENT`（密大） | Conference Board CCI 無免費來源 |
 | ISM 服務業 PMI | TradingView `USNMBA`（商業活動細項） | 綜合 PMI 無免費來源 |
 | 黃金 | Yahoo `GC=F`（COMEX 期貨） | LBMA 現貨已自 FRED 下架 |
-| TED 利差 | FRED `SOFR`、`DTB3` | TEDRATE 已於 2022-01 停更 |
+| TED 利差 | FRED `SOFR`、`UST_DTB3`（FRED `DTB3`＋美國財政部最新日） | TEDRATE 已於 2022-01 停更 |
 
 替代方案的比較與選擇理由見 [doc/decisions/DA-04-非FRED指標方案.md](doc/decisions/DA-04-非FRED指標方案.md)。
 

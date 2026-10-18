@@ -243,6 +243,8 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <ul>
     <li><a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">FRED</a>（Federal Reserve Bank of St. Louis）：多數序列為公共資料，部分序列版權屬原發布機構，使用依 <a href="https://fred.stlouisfed.org/legal/" target="_blank" rel="noopener">FRED 使用條款</a>。</li>
     <li><a href="https://www.eia.gov/" target="_blank" rel="noopener">EIA</a>（U.S. Energy Information Administration）：美國政府公開資料。</li>
+    <li><a href="https://www.cboe.com/tradable_products/vix/vix_historical_data/" target="_blank" rel="noopener">Cboe</a>（Cboe Global Markets）：VIX 官方每日收盤，使用依 Cboe 網站條款。</li>
+    <li><a href="https://home.treasury.gov/resource-center/data-chart-center/interest-rates" target="_blank" rel="noopener">美國財政部</a>（U.S. Department of the Treasury）：每日公債殖利率與國庫券利率，美國政府公開資料；本站用來接續 FRED 尚未收錄的最新交易日。</li>
     <li><a href="https://finance.yahoo.com/" target="_blank" rel="noopener">Yahoo Finance</a>：非官方來源，僅供參考。</li>
     <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>：非官方來源，僅供參考；ISM、Baltic Exchange 等原始數據版權屬原機構，有授權限制。</li>
     <li>衍生序列（年增率、移動平均等）為本站依上述資料自行計算。</li>
@@ -256,7 +258,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
-<footer>版本 <span id="app-version">0.11.1</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.12.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -276,7 +278,7 @@ const DISPLAY_RULES = {
   'pce-price-index': { mode: 'yoy' },
   'm2-money-supply': { mode: 'yoy' },
   'credit-spreads': { mode: 'spread', a: 'DBAA', b: 'DAAA' },
-  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'DTB3' }
+  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'UST_DTB3' }
 };
 const MODE_LABEL = {
   mom: '月增減（千人）',
@@ -284,7 +286,14 @@ const MODE_LABEL = {
   spread: '利差（百分點）',
   raw: '原值'
 };
-const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA' };
+const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA', CBOE: 'Cboe', UST: 'FRED＋美國財政部' };
+// 來源列文字：「來源: 序列代碼」，series 有 lag 時加註延遲（DA-10）
+function sourceText(ids, defOf) {
+  return ids.map(id => {
+    const d = defOf(id);
+    return (SOURCE_LABEL[d.source] || d.source || '來源未標') + ': ' + id + (d.lag ? '（延遲：' + d.lag + '）' : '');
+  }).join('；');
+}
 const TIMING = { L: '領先', C: '同時', G: '落後' };
 
 const seriesCache = new Map();
@@ -453,7 +462,7 @@ async function buildCard(ind) {
     ? '<div><span class="badge-sub">替代</span> <span class="mode">替代序列：' +
       esc((subUsed.length ? subUsed.map(s => s.id) : ids).join('、')) + '</span></div>'
     : '';
-  const srcText = ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
+  const srcText = sourceText(ids, defOf);
 
   const card = el('<div class="card">' + headHtml(ind) + subBadge +
     '<div class="value-row"><span class="value">' + fmtNum(last[1], mode) + '</span>' + changeHtml + '</div>' +
@@ -679,7 +688,7 @@ async function openDetail(ind) {
   const plan = detailPlan(ind);
   const defOf = id => (ind.series || []).find(x => x.id === id) || {};
   const isSub = ind.status === 'substitute' || plan.ids.some(id => defOf(id).substitute);
-  const srcText = plan.ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
+  const srcText = sourceText(plan.ids, defOf);
   const tag = ind.timing ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>' : '';
   dlg.querySelector('.dhead').innerHTML =
     '<h2 class="dtitle" id="detail-title">' + esc(ind.name_zh) + '<span class="en">' + esc(ind.name_en) + '</span></h2>' +

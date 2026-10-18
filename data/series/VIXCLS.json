@@ -1,6 +1,6 @@
 {
   "id": "VIXCLS",
-  "title": "VIX 恐慌指數 CBOE Volatility Index (VIX)",
+  "title": "VIX 恐慌指數 CBOE Volatility Index (VIX)（FRED 對照（約落後 1 個營業日））",
   "source": "FRED",
   "frequency": "daily",
   "units": null,

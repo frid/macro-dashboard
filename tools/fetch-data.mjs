@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// 抓各來源資料 → data/series/<ID>.json（DA-02 FRED；DA-04 加 Yahoo／EIA／TradingView）
+// 抓各來源資料 → data/series/<ID>.json（DA-02 FRED；DA-04 加 Yahoo／EIA／TradingView；DA-10 加 Cboe／美國財政部）
 // 用法：
 //   node tools/fetch-data.mjs                     抓 indicators.json 內所有序列＋USREC
 //   node tools/fetch-data.mjs DGS10 TV_BDI        只抓指定序列
@@ -9,6 +9,8 @@
 //   YAHOO        chart API JSON（yahooSymbol，日線）
 //   EIA          官網歷史資料頁 HTML 表格（eiaSeries，週資料）
 //   TRADINGVIEW  圖表 WebSocket（tvSymbol、tvInterval，非官方協定；整批一條連線，逾時 30 秒）
+//   CBOE         官方歷史 CSV（cboeSymbol，日資料，取 CLOSE）
+//   UST          FRED 原序列（fredBase）＋美國財政部每日利率 CSV（ustType、ustColumn）補上 FRED 還沒有的日期
 // Node 24 內建 fetch／WebSocket，零套件。失敗的序列不會建立或覆蓋檔案，結束碼為 1。
 
 import { readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises';
@@ -31,7 +33,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // title 規則：優先用 role === 'main' 的引用，標題為「中文名 英文名」；
 // 若序列只被 compare／component 引用，標題在後面加上 note（沒有 note 就不加）。
 function collectSeries(catalog) {
-  const map = new Map(); // id -> { id, source, title, substitute, isMain, yahooSymbol?, eiaSeries?, tvSymbol?, tvInterval? }
+  const map = new Map(); // id -> { id, source, title, substitute, isMain, yahooSymbol?, eiaSeries?, tvSymbol?, tvInterval?, cboeSymbol?, ustType?, ustColumn?, fredBase? }
   for (const ind of catalog.indicators) {
     for (const s of ind.series ?? []) {
       const isMain = s.role === 'main';
@@ -49,6 +51,10 @@ function collectSeries(catalog) {
           eiaSeries: s.eiaSeries,
           tvSymbol: s.tvSymbol,
           tvInterval: s.tvInterval,
+          cboeSymbol: s.cboeSymbol,
+          ustType: s.ustType,
+          ustColumn: s.ustColumn,
+          fredBase: s.fredBase,
         });
       } else {
         prev.substitute = prev.substitute || !!s.substitute;
@@ -218,6 +224,67 @@ async function fetchEia(meta) {
   const rel = text.match(/>\s*Release Date:\s*(\d{2})\/(\d{2})\/(\d{4})\s*</);
   const lastUpdated = rel ? `${rel[3]}-${rel[1]}-${rel[2]}` : null;
   return { observations: finalize(parseEia(text)), lastUpdated };
+}
+
+// ---- CBOE／UST 共用：依表頭名稱取欄位的簡易 CSV（兩者欄位都不含逗號）----
+// 日期為 MM/DD/YYYY，轉成 YYYY-MM-DD；空值略過（不記 null，日資料缺的日子本來就不列）。
+function parseNamedCsv(label, text, column) {
+  const lines = text.replace(/^\uFEFF/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
+  if (lines.length < 2) throw new Error(`${label} 回應沒有資料列：${text.slice(0, 80)}`);
+  const head = lines[0].split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+  const di = head.findIndex((h) => h.toUpperCase() === 'DATE');
+  const vi = head.indexOf(column);
+  if (di < 0 || vi < 0) throw new Error(`${label} 表頭找不到 DATE 或 "${column}"，實際 "${lines[0].slice(0, 120)}"`);
+  const obs = [];
+  for (let i = 1; i < lines.length; i++) {
+    const c = lines[i].split(',').map((x) => x.trim().replace(/^"|"$/g, ''));
+    const dm = (c[di] ?? '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!dm) throw new Error(`${label} 第 ${i + 1} 行日期格式錯誤：${lines[i].slice(0, 80)}`);
+    const raw = c[vi] ?? '';
+    if (raw === '' || raw === 'N/A') continue;
+    const value = Number(raw);
+    if (!Number.isFinite(value)) throw new Error(`${label} 第 ${i + 1} 行數值無法解析：${raw}`);
+    obs.push([`${dm[3]}-${dm[1]}-${dm[2]}`, value]);
+  }
+  if (obs.length === 0) throw new Error(`${label} 欄 "${column}" 沒有數值`);
+  return obs;
+}
+
+// ---- CBOE：官方歷史 CSV（cdn.cboe.com 會 307 轉址到 cdn-api.cboe.com，fetch 預設跟隨）----
+// 欄位 DATE,OPEN,HIGH,LOW,CLOSE；取 CLOSE。last_updated 用 HTTP last-modified，沒有則用最後一筆觀測日。
+async function fetchCboe(meta) {
+  const sym = meta.cboeSymbol;
+  if (!sym) throw new Error('目錄缺 cboeSymbol');
+  const url = `https://cdn.cboe.com/api/global/us_indices/daily_prices/${encodeURIComponent(sym)}_History.csv`;
+  const { text, lastModified } = await download(url, { 'User-Agent': UA });
+  const observations = finalize(parseNamedCsv(`Cboe ${sym}`, text, 'CLOSE'));
+  return { observations, lastUpdated: toDate(lastModified) ?? observations.at(-1)[0] };
+}
+
+// ---- UST：FRED 原序列＋美國財政部每日利率 CSV ----
+// FRED 日資料約落後 1 個營業日；財政部當天傍晚就有。做法：先抓 FRED（fredBase）完整歷史，
+// 再抓財政部「FRED 最後一個有值日期」所在年起到今年的 CSV（1 月時自然含前一年），
+// 只把晚於 FRED 最後有值日的日期接上去；同一天兩邊都有值時以 FRED 為準。
+// 財政部抓不到或解析失敗 → 整個序列失敗（不寫檔、不覆寫舊檔）。
+// last_updated 用最後一筆有值的觀測日（財政部 CSV 沒有發布日期）。
+async function fetchUst(meta) {
+  const { fredBase, ustType, ustColumn } = meta;
+  if (!fredBase || !ustType || !ustColumn) throw new Error('目錄缺 fredBase、ustType 或 ustColumn');
+  const fred = (await fetchFred({ id: fredBase })).observations;
+  const fredLast = fred.filter(([, v]) => v != null).at(-1)?.[0];
+  if (!fredLast) throw new Error(`FRED ${fredBase} 沒有有效數值`);
+  const thisYear = new Date().getUTCFullYear();
+  const ust = [];
+  for (let y = Number(fredLast.slice(0, 4)); y <= thisYear; y++) {
+    await sleep(DELAY_MS);
+    const url = `https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv/${y}/all?type=${encodeURIComponent(ustType)}&field_tdr_date_value=${y}&page&_format=csv`;
+    const { text } = await download(url, { 'User-Agent': UA });
+    ust.push(...parseNamedCsv(`美國財政部 ${ustType} ${y}`, text, ustColumn));
+  }
+  const m = new Map(fred);
+  for (const [d, v] of ust) if (d > fredLast) m.set(d, v);
+  const observations = finalize([...m.entries()]);
+  return { observations, lastUpdated: observations.filter(([, v]) => v != null).at(-1)[0] };
 }
 
 // ---- TRADINGVIEW：圖表 WebSocket（非官方協定）----
@@ -417,9 +484,9 @@ async function main() {
   };
 
   const metas = ids.map((id) => all.get(id) ?? { id, source: 'FRED', title: id, substitute: false });
-  const fetchers = { FRED: fetchFred, YAHOO: fetchYahoo, EIA: fetchEia };
+  const fetchers = { FRED: fetchFred, YAHOO: fetchYahoo, EIA: fetchEia, CBOE: fetchCboe, UST: fetchUst };
 
-  // FRED／YAHOO／EIA：逐一抓
+  // FRED／YAHOO／EIA／CBOE／UST：逐一抓
   let n = 0;
   for (const meta of metas) {
     if (meta.source === 'TRADINGVIEW') continue;
