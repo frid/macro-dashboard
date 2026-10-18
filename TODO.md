@@ -21,7 +21,6 @@
 # 畫面
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
 - [ ] UI-05 公布行事曆：各指標下次公布時間（依講義公布規則）
-- [ ] UI-06 頁尾：資料來源與講義出處聲明、版號（讀 `VERSION`）、最後更新日期
 - [ ] UI-07 深色／淺色主題、手機版版面
 - [ ] UI-08 Indicator 要顯示更日期、預估下次更新日期、與還有幾天 (有顏色表示)。注意時區 (台灣跟美國時差)
 - [ ] UI-10 替代的指標要註明、沒有列出的也要註明
@@ -29,13 +28,14 @@
   - UI-01 留下：SOFR 卡因 `SOFR.json` substitute=true 也顯示「替代」，但 SOFR 本身是 MC 指標主序列，確認是否該標
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
   - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
-- [ ] UI-16 加上回到最上層的按鈕
 - [ ] UI-17 FedWatch 區塊：讀 `data/fedwatch.json` 顯示最近一場 FOMC 會議的目標利率區間機率（Ease／No change／Hike、Now／1D／1W／1M），標「替代：依 CME 方法以 ZQ 期貨自算」，附連結 <https://www.cmegroup.com/cn-t/markets/interest-rates/cme-fedwatch-tool.html>（依賴 DA-11）
 
 # 文件
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-06 頁尾：分開顯示「網站版本／改版日」與「資料抓取日」（讀各序列 `fetched_at` 最大值與 `fedwatch.json` 的 `generated_at`）；版號改讀 `VERSION`、讀不到沿用寫死值（資料來源與講義出處聲明已由 UI-09 完成）（完成 2026-10-18）
+- [x] UI-16 回到最上層按鈕：捲動超過一個視窗高度時右下角浮出圓形 ↑ 按鈕（手機 16px 邊距），點擊平滑捲回頁首，`prefers-reduced-motion` 時直接跳轉（完成 2026-10-18）
 - [x] DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`，解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約，依 CME FedWatch 方法自算最近一場會議的目標區間機率（Now／1D／1W／1M）寫入 `data/fedwatch.json`（替代，2026-10-28 會議 84.5／15.5 與 CME 一致）；`fed-funds-rate` 的 `external` 加 CME 連結 `url`；畫面另開 UI-17（完成 2026-10-18）
 - [x] UI-15 指標細項說明：UI-02 詳細面板圖表下方加「指標內容／資料來源／判斷標準」三欄；`indicators.json` 32 個指標新增 `description`（講義摘要，附 [K 頁碼]）；資料來源列全部序列（主序列／對照／計算成分、替代徽章、延遲、原始付費來源、衍生序列）；判斷標準列 `rule`、`thresholds` 與 `signal` 白話說明；圖表載入失敗時說明仍保留（完成 2026-10-18）
 - [x] UI-12 卡片數值細修：`indicators.json` series[] 加 `unit`（百萬美元／十億美元／%／指數／千人等 68 序列）；卡片數值與變動帶單位，百萬美元換算成億／兆美元並註原始單位；% 類序列變動改「個百分點」；raw 卡只在前值與現值皆 > 0 時才附 % 變動（修 Sahm -0.07→0 顯示 ▲100%）；詳細圖 caption／Y 軸名稱／tooltip 加單位（完成 2026-10-18）
