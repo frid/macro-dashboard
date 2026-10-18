@@ -28,8 +28,6 @@
 - [ ] UI-06 頁尾：資料來源與講義出處聲明、版號（讀 `VERSION`）、最後更新日期
 - [ ] UI-07 深色／淺色主題、手機版版面
 - [ ] UI-08 Indicator 要顯示更日期、預估下次更新日期、與還有幾天 (有顏色表示)。注意時區 (台灣跟美國時差)
-- [ ] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）
-  - 要你決定：製作者署名寫法（姓名／EMBA 班別／聯絡方式）、是否加授權聲明（如程式 MIT、內容僅供課堂學習）
 - [ ] UI-10 替代的指標要註明、沒有列出的也要註明
   - 資料層 DA-04 已標好（`substitute`、`unavailable`、`series[].note`），本項是畫面顯示
   - UI-01 留下：SOFR 卡因 `SOFR.json` substitute=true 也顯示「替代」，但 SOFR 本身是 MC 指標主序列，確認是否該標
@@ -45,6 +43,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）
 - [x] UI-02 指標詳細圖：點卡片（或鍵盤 Enter／Space）開 `<dialog>`，照講義格式畫原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影，下方 YoY 圖；`thresholds[]` 畫門檻虛線（新增 `on:"yoy"`、`series` 欄位），`series[].axis` 支援雙軸對照（初領／續領、U6／兼職、耐久財、房貸）；lttb 降取樣＋上下圖連動縮放（預設近 20 年）；`?detail=<id>` 直接開啟（完成 2026-10-18）
 - [x] DA-07 G 區債務圖組：抓 `GFDEBTN`、`HMLBSHNO`、`MABSHNO`、`CMLBSHNO`、`SLOASM`、`REVOLSL`、`MVLOASM`、`GDP`，算 YoY 與占 GDP 比 [K 69–91]：21 個衍生序列（YoY、占 GDP 比、占 GDP 比 YoY）寫入 `data/derived/`（完成 2026-10-18）
 - [x] UI-14 頁首 Banner 改用弗里德里希〈霧海上的旅人〉（c. 1818，公有領域，Wikimedia Commons），全站配色改用畫中色票（霧灰、岩褐、灰藍、赭）；Banner 標註出處；深色模式留給 UI-07（完成 2026-10-18）

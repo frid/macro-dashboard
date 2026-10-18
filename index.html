@@ -77,7 +77,7 @@ header .credit a { color: inherit; }
   header h1 { font-size: 1.3rem; }
   header .credit { left: 16px; font-size: .62rem; }
 }
-header .inner, main, footer { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+header .inner, main, footer, details.about { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
 header .inner { padding: 0; }
 header h1 { margin: 0 0 4px; font-size: 1.6rem; }
 header p { margin: 2px 0; font-size: .92rem; opacity: .92; }
@@ -175,6 +175,14 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .light .lwhy { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; word-break: break-word; }
 .fatal { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger-text); padding: 16px; border-radius: 8px; margin: 16px 0; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+/* 關於本站（UI-09） */
+details.about { color: var(--muted); font-size: .85rem; padding-top: 8px; padding-bottom: 8px; border-top: 1px solid var(--border); overflow-wrap: anywhere; }
+details.about summary { cursor: pointer; color: var(--text); }
+details.about h3 { margin: 14px 0 4px; font-size: .9rem; color: var(--text); }
+details.about p, details.about ul { margin: 4px 0; }
+details.about ul { padding-left: 1.3em; }
+details.about a { color: var(--accent); }
+@media (max-width: 600px) { details.about { font-size: .82rem; } }
 /* 指標詳細圖（UI-02） */
 .card.clickable { cursor: pointer; }
 .card.clickable:hover { border-color: var(--accent); }
@@ -229,7 +237,26 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p class="credit">Caspar David Friedrich〈霧海上的旅人〉Wanderer above the Sea of Fog（c. 1818）・Hamburger Kunsthalle・Public domain, via <a href="https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" target="_blank" rel="noopener">Wikimedia Commons</a></p>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.10.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<details class="about">
+  <summary>關於本站／資料來源與版權</summary>
+  <h3>資料來源</h3>
+  <ul>
+    <li><a href="https://fred.stlouisfed.org/" target="_blank" rel="noopener">FRED</a>（Federal Reserve Bank of St. Louis）：多數序列為公共資料，部分序列版權屬原發布機構，使用依 <a href="https://fred.stlouisfed.org/legal/" target="_blank" rel="noopener">FRED 使用條款</a>。</li>
+    <li><a href="https://www.eia.gov/" target="_blank" rel="noopener">EIA</a>（U.S. Energy Information Administration）：美國政府公開資料。</li>
+    <li><a href="https://finance.yahoo.com/" target="_blank" rel="noopener">Yahoo Finance</a>：非官方來源，僅供參考。</li>
+    <li><a href="https://www.tradingview.com/" target="_blank" rel="noopener">TradingView</a>：非官方來源，僅供參考；ISM、Baltic Exchange 等原始數據版權屬原機構，有授權限制。</li>
+    <li>衍生序列（年增率、移動平均等）為本站依上述資料自行計算。</li>
+    <li>卡片上標「替代」者為替代序列。</li>
+  </ul>
+  <h3>講義出處</h3>
+  <p>郭維裕教授《Fantastic Economic Indicators》（國立政治大學 EMBA「生技產業之投資分析與個案探討」）。畫面上的判讀說明為本站自行摘要，非講義原文；講義未公開，引用處以 [K 頁碼] 標示。</p>
+  <h3>製作者</h3>
+  <p>侯榮富 博士</p>
+  <h3>版權與聲明</h3>
+  <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
+  <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
+</details>
+<footer>版本 <span id="app-version">0.11.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
