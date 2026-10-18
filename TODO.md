@@ -19,6 +19,7 @@
   - VIX：主序列改 Yahoo `^VIX`，FRED `VIXCLS` 留作對照
   - 其他 FRED 日資料也改用即時來源：`DFF`／`DFEDTARU`／`DFEDTARL`（聯邦基金利率）、`DGS10`、`SOFR`、`T10Y3M`／`T10Y2Y`（期限利差）、`DBAA`／`DAAA`、`BAMLC0A4CBBB`（信用利差）、`DTB3`、`T10YIE`（損益兩平通膨）、`DTWEXBGS`；逐一找可用來源，找不到即時來源的維持 FRED 並在畫面註明延遲
   - 換來源後的序列與 FRED 原序列做一致性比對（同 DA-04 做法）；用 Yahoo 等非官方來源時依 CLAUDE.md 註明
+- [ ] DA-11 加上 FED Watch 來源顯示
 
 # 畫面
 - [ ] UI-02 指標詳細圖：點卡片展開，照講義格式「原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影」，下方配 YoY 圖；門檻線（PMI 50、Sahm 0.5、Philly Fed 0、期限利差 0、債務 YoY 3%、損益兩平通膨 2%、VIX 12／20／30、YoY 0 線）；支援雙軸對照（如初領 vs 續領）
@@ -38,12 +39,15 @@
 - [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
   - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
+- [ ] UI-15 每個指標細項說明「指標內容、資料來源、判斷標準」（放在 UI-02 展開的細項面板，依賴 UI-02）
+  - 指標內容：`indicators.json` 每個指標新增 `description`（依講義用自己的話摘要，附 `[K 頁碼]`）
+  - 資料來源取自 `series[]`（替代要註明）；判斷標準取自 `rule`／`thresholds`／`signal`
 
 # 文件
-- [ ] DC-01 README：用途、線上網址、資料來源、如何本機更新資料
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DC-01 README：資料來源依 FRED／Yahoo／EIA／TradingView／衍生序列列出序列代碼、替代與無公開資料指標、各來源條款；更新資料步驟（Node 24、fetch→derive、失敗不覆蓋）、本機預覽、專案結構（完成 2026-10-18）
 - [x] UI-14 頁首 Banner 改用弗里德里希〈霧海上的旅人〉（c. 1818，公有領域，Wikimedia Commons），全站配色改用畫中色票（霧灰、岩褐、灰藍、赭）；Banner 標註出處；深色模式留給 UI-07（完成 2026-10-18）
 - [x] UI-03 綜合訊號總覽：頁首下方新增 `section#signal-summary`，依 [K 4] 統計 19 項計入指標的擴張／中性／收縮（13 項不計），按領先／同時／落後拆表、給多數方向結論，32 個燈號格附判斷依據並可跳到卡片；判讀規則寫成 `indicators.json` 的 `signal` 欄位（raw 門檻／yoy／3 月均對 12 月均趨勢），格式寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] DA-05 衍生指標計算：新增 `tools/derive-data.mjs`，由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/`（NFP 月增減／年增率、自算 Sahm Rule（對照 SAHMREALTIME）、CPI／核心 CPI／PCE／核心 PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 資料對）；`indicators.json` 加 `derived_series`，格式寫入 SU-02 決策檔（完成 2026-10-18）
