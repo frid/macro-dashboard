@@ -14,11 +14,15 @@
 
 ## Git 規則
 
-- 主分支是 `main`。
-- 修改一律在新的 branch／worktree 上做，不要直接改 `main`。
-- **使用者明確說「merge」才可以合併回 `main`。** 在那之前只能 commit／push 分支。
+- 分支分三層：
+  - `main`：上線版（GitHub Pages 從 `main` 發佈）。只透過 release 更新。
+  - `dev`：開發整合分支。所有任務完成後都合併到這裡。
+  - 任務分支：每個任務一個 worktree／branch，**從 `dev` 開出**（名稱用任務代號，如 `da-02-fetch`）。
+- 不直接在 `main`、`dev` 上改檔；修改一律在任務 worktree 上做。
+- **任務 → `dev`**：任務驗證 PASS 後，`task-release` 收尾時 commit、push 任務分支，並以 `--no-ff` 合併進 `dev`、push `dev`。不必另外等使用者說「merge」。
+- **`dev` → `main`（release）**：**只有使用者明確說「release」或叫用 `project-release` skill 才做**。合併後在 `main` 打 tag `v<VERSION>`，push `main` 與 tag。
 - `Docs/Ref/*.pdf` 不進版控（檔案超過 GitHub 100MB 上限，且為課程講義未公開）。
-- 不 force push、不 push `main`（merge 由使用者明確指示後才做）。
+- 不 force push；除 release 流程外不 push `main`。
 - **已知限制**：專案在 Google Drive 掛載路徑（`/mnt/g`），WSL 下凡是寫 `.git/config` 的指令都會報 `chmod on .git/config.lock failed`（`git config`、`push -u` 設上游、刪分支時的設定清理）。commit、branch、worktree 正常。要改設定就在 Windows 端的 git 做，或把設定寫在指令列（`git -c key=value …`）；push 用 `git push origin <branch>`，不要依賴 `-u`。
 
 ## 版本
@@ -46,7 +50,8 @@
 2. **先規劃再執行** → 先把「目標／動作／會動到／驗證方式」寫給使用者看，**使用者點頭後才改檔**。
 3. **執行（交 subagent）** → 開工時把該項標成 `[~]`。主 session 不直接改程式檔（`index.html`、`tools/`、`data/`）：讀程式派 `Explore`，改檔派一個 worker subagent，由 Claude 依任務自選（小改 `worker-haiku`／一般功能 `worker-sonnet`／動到資料結構或多處連動 `worker-opus`；定義在 `.claude/agents/`）。
 4. **驗證（另派 subagent）** → 改的人不驗自己：另派 `verifier-sonnet`（不能改檔）做 JS 語法檢查（`node --check`）＋資料檔 JSON 檢查＋ headless Chrome 截圖；需要手點的功能請使用者本機確認。結果據實回報，FAIL 不收尾。
-5. **收尾** → 用 `task-release` skill：`TODO.md` 標 `[x]` 加完成日、更新 `VERSION`／`CHANGELOG.md`／頁尾版號與「最後更新日期」、commit、push 分支。
-6. **停下** → 回報 commit／分支／版號，等使用者決定下一步。要上線必須等使用者說「merge」。
+5. **收尾** → 用 `task-release` skill：`TODO.md` 標 `[x]` 加完成日、更新 `VERSION`／`CHANGELOG.md`／頁尾版號與「最後更新日期」、commit、push 任務分支，再 `--no-ff` 合併進 `dev` 並 push `dev`。
+6. **停下** → 回報 commit／分支／版號／`dev` 合併 commit，等使用者決定下一步。
+7. **上線（release）** → 使用者說「release」或 `/project-release` 時，用 `project-release` skill：`dev` `--no-ff` 合併進 `main`、打 tag `v<VERSION>`、push `main` 與 tag。沒有這個指示，`main` 不動。
 
 **用量守六成**：主 session context 用量超過約 60% → 先 commit 目前進度，提醒使用者 `/clear` 後再用 `task-next` 接著做。
