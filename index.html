@@ -164,9 +164,10 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .sig-table { border-collapse: collapse; background: var(--card); font-size: .85rem; font-variant-numeric: tabular-nums; }
 .sig-table th, .sig-table td { border: 1px solid var(--border); padding: 4px 10px; text-align: center; }
 .sig-table th { background: var(--pending-bg); font-weight: 600; }
-.sig-table th.exp { color: var(--sig-up); }
-.sig-table th.neu { color: var(--sig-flat); }
-.sig-table th.con { color: var(--sig-down); }
+.sig-table th.G { color: var(--sig-up); }
+.sig-table th.Y { color: var(--sig-flat); }
+.sig-table th.R { color: var(--sig-down); }
+.sig-table th.na { color: var(--muted); }
 .sig-table tr.total td { font-weight: 700; }
 .sig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .light {
@@ -181,7 +182,7 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
   min-width: 0;
 }
 .light:hover { border-color: var(--accent); }
-/* 格子底色依燈號 G／Y／R（UI-11）；擴張／中性／收縮文字顏色仍依 UI-03 狀態 */
+/* 格子底色與狀態文字顏色依燈號 G／Y／R（UI-11） */
 .light.G { border-left-color: var(--sig-up); background: var(--sig-up-bg); }
 .light.Y { border-left-color: var(--sig-flat); background: var(--sig-flat-bg); }
 .light.R { border-left-color: var(--sig-down); background: var(--sig-down-bg); }
@@ -189,9 +190,9 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .light .lhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .light .lname { font-weight: 600; font-size: .9rem; }
 .light .lstate { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
-.light .lstate.exp { color: var(--sig-up); }
-.light .lstate.neu { color: var(--sig-flat); }
-.light .lstate.con { color: var(--sig-down); }
+.light .lstate.G { color: var(--sig-up); }
+.light .lstate.Y { color: var(--sig-flat); }
+.light .lstate.R { color: var(--sig-down); }
 .sig-lamps { margin: -4px 0 10px; font-size: .9rem; }
 .sig-lamps b.G { color: var(--sig-up); }
 .sig-lamps b.Y { color: var(--sig-flat); }
@@ -282,7 +283,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
-<footer>版本 <span id="app-version">0.13.1</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.13.2</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -630,7 +631,7 @@ function isSubstituteSignal(ind) {
 }
 
 // ---- 燈號（UI-11）：G 綠＝沒問題、Y 黃＝警告再觀察、R 紅＝危險、na＝未判（畫面「—」） ----
-const LIGHT_LABEL = { G: '沒問題', Y: '警告、再觀察', R: '危險', na: '未判' };
+const LIGHT_LABEL = { G: '沒問題', Y: '觀察', R: '危險', na: '未判' };
 const LIGHT_TEXT = { G: 'G', Y: 'Y', R: 'R', na: '—' };
 // 由綜合訊號推燈號：門檻型（raw／yoy）收縮即越過講義門檻 → R；趨勢型（trend）講義無危險門檻，非擴張一律 Y
 const LIGHT_FROM_SIGNAL = {
@@ -703,22 +704,24 @@ function summarySection() {
 }
 
 function fillSummary(sec, inds, sigs, lights) {
-  const states = ['exp', 'neu', 'con', 'na'];
+  const states = ['G', 'Y', 'R', 'na'];
   const rows = ['L', 'C', 'G'];
   if (inds.some(i => !TIMING[i.timing])) rows.push('-');
   const cnt = {};
-  for (const r of rows.concat('all')) cnt[r] = { exp: 0, neu: 0, con: 0, na: 0 };
+  for (const r of rows.concat('all')) cnt[r] = { G: 0, Y: 0, R: 0, na: 0, exp: 0, neu: 0, con: 0, sna: 0 };
   inds.forEach((ind, k) => {
     const r = TIMING[ind.timing] ? ind.timing : '-';
-    cnt[r][sigs[k].state]++;
-    cnt.all[sigs[k].state]++;
+    const lg = lights[k].light;
+    cnt[r][lg]++;
+    cnt.all[lg]++;
+    cnt.all[sigs[k].state === 'na' ? 'sna' : sigs[k].state]++;
   });
 
-  const head = '<tr><th>時序</th>' + states.map(s => '<th class="' + s + '">' + STATE_LABEL[s] + '</th>').join('') + '<th>小計</th></tr>';
+  const head = '<tr><th>時序</th>' + states.map(s => '<th class="' + s + '">' + LIGHT_LABEL[s] + '</th>').join('') + '<th>小計</th></tr>';
   const rowHtml = (r, label, cls) => {
     const c = cnt[r];
     return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td>' +
-      states.map(s => '<td>' + c[s] + '</td>').join('') + '<td>' + (c.exp + c.neu + c.con + c.na) + '</td></tr>';
+      states.map(s => '<td>' + c[s] + '</td>').join('') + '<td>' + (c.G + c.Y + c.R + c.na) + '</td></tr>';
   };
   sec.querySelector('.sig-wrap').innerHTML = '<table class="sig-table">' + head +
     rows.map(r => rowHtml(r, r === '-' ? '未標' : TIMING[r])).join('') + rowHtml('all', '合計', 'total') + '</table>';
@@ -729,12 +732,12 @@ function fillSummary(sec, inds, sigs, lights) {
   const dirText = dir === 'exp' ? '目前多數指標偏擴張' : dir === 'con' ? '目前多數指標偏收縮' : '擴張與收縮指標數相同，方向不明';
   const v = sec.querySelector('.sig-verdict');
   v.className = 'sig-verdict ' + dir;
-  v.textContent = '列入判斷 ' + counted + ' 項：擴張 ' + a.exp + '、中性 ' + a.neu + '、收縮 ' + a.con + ' → ' + dirText + '（不計 ' + a.na + ' 項）';
+  v.textContent = '列入判斷 ' + counted + ' 項：擴張 ' + a.exp + '、中性 ' + a.neu + '、收縮 ' + a.con + ' → ' + dirText + '（不計 ' + a.sna + ' 項）';
 
   // 燈號匯總（UI-11）：全部指標都算，未判＝講義無門檻或資料不足
   const lc = { G: 0, Y: 0, R: 0, na: 0 };
   lights.forEach(lt => { lc[lt.light] = (lc[lt.light] || 0) + 1; });
-  sec.querySelector('.sig-lamps').innerHTML = '燈號（G 沒問題／Y 警告、再觀察／R 危險）：' +
+  sec.querySelector('.sig-lamps').innerHTML = '燈號（G 沒問題／Y 觀察／R 危險）：' +
     '<b class="G">G ' + lc.G + '</b>／<b class="Y">Y ' + lc.Y + '</b>／<b class="R">R ' + lc.R + '</b>／未判 ' + lc.na;
 
   const grid = sec.querySelector('.sig-grid');
@@ -746,7 +749,7 @@ function fillSummary(sec, inds, sigs, lights) {
     const note = ind.signal && ind.signal.note ? ind.signal.note : '';
     grid.appendChild(el('<a class="light ' + lt.light + '" href="#ind-' + esc(ind.id) + '" title="' + esc(note) + '">' +
       '<div class="lhead">' + lampHtml(lt) + '<span class="lname">' + esc(ind.name_zh) + '</span>' + tag + sub +
-      '<span class="lstate ' + sg.state + '">' + STATE_LABEL[sg.state] + '</span></div>' +
+      '<span class="lstate ' + lt.light + '">' + LIGHT_LABEL[lt.light] + '</span></div>' +
       '<div class="lwhy">' + esc(sg.text) + '</div></a>'));
   });
 }
