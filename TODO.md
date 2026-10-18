@@ -30,14 +30,13 @@
 - [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
 - [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
   - 衍生值同時是 UI-11 燈號、UI-03 總覽的判斷輸入；卡片顯示的數字要跟判斷用的是同一個值
-- [ ] UI-15 每個指標細項說明「指標內容、資料來源、判斷標準」（放在 UI-02 展開的細項面板，依賴 UI-02）
-  - 指標內容：`indicators.json` 每個指標新增 `description`（依講義用自己的話摘要，附 `[K 頁碼]`）
-  - 資料來源取自 `series[]`（替代要註明）；判斷標準取自 `rule`／`thresholds`／`signal`
+- [ ] UI-16 加上回到最上層的按鈕
 
 # 文件
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-15 指標細項說明：UI-02 詳細面板圖表下方加「指標內容／資料來源／判斷標準」三欄；`indicators.json` 32 個指標新增 `description`（講義摘要，附 [K 頁碼]）；資料來源列全部序列（主序列／對照／計算成分、替代徽章、延遲、原始付費來源、衍生序列）；判斷標準列 `rule`、`thresholds` 與 `signal` 白話說明；圖表載入失敗時說明仍保留（完成 2026-10-18）
 - [x] UI-11 每個指標卡片與總覽加 G／Y／R 燈號：門檻型（raw／yoy）訊號擴張 G、中性 Y、跨門檻 R，趨勢型轉弱只到 Y；新增 `light` 欄位補判預算赤字（赤字占 GDP > 3% → R）、債務 YoY > 3%、PCE 年增率 > 2%、TIPS 損益兩平 ≥ 2%（Y）；總覽加燈號統計，`data/derived/` 可直接讀（完成 2026-10-18）
 - [x] DA-10 日資料改用即時來源：VIX 主序列改 Cboe 官方 CSV（`CBOE_VIX`，`VIXCLS` 留作對照）；10 年期公債、3 個月國庫券改為 FRED 歷史接上美國財政部最新日（`UST_DGS10`、`UST_DTB3`），皆比 FRED 早 1 個營業日、重疊期間 100% 相同；T10Y3M／T10Y2Y／T10YIE、DFF／SOFR、目標區間已與官方同步，DBAA／DAAA／BAMLC0A4CBBB／DTWEXBGS 無免費即時來源，維持 FRED 並以 `lag` 在畫面註明延遲；比對紀錄見 DA-04 決策檔（完成 2026-10-18）
 - [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）
