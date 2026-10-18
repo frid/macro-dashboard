@@ -1,7 +1,7 @@
 # DA-03：每日抓取資料並 commit
 # - 資料 commit 到 main（GitHub Pages 從 main 發佈），再用 --no-ff 合回 dev，避免日後 dev → main release 時資料檔衝突。
 # - bot 只 add data/，不碰其他檔。
-# - 只有 main 分支上的執行會 commit；其他分支（實測用）只跑不 commit。
+# - 只有 main 分支上的執行會 commit；其他分支手動觸發時只跑不 commit。
 # - 單一來源抓取失敗時保留舊檔，其餘照常；有失敗時 job 最後標失敗以通知，但資料 commit 仍會完成。
 name: update-data
 
@@ -9,12 +9,6 @@ on:
   schedule:
     - cron: "30 22 * * *" # UTC 22:30 = 台灣 06:30
   workflow_dispatch:
-  # DA-03 實測用，合併前移除（實測雲端 IP 能否連 TradingView WebSocket 等來源，測試模式不 commit）
-  push:
-    branches: [da-03-actions]
-    paths:
-      - ".github/workflows/update-data.yml"
-      - "tools/**"
 
 permissions:
   contents: write
