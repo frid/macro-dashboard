@@ -407,7 +407,7 @@
       "release": "每營業日",
       "series": [
         { "id": "YF_DXY", "source": "YAHOO", "yahooSymbol": "DX-Y.NYB", "role": "main", "substitute": false, "note": "ICE 美元指數（DXY）" },
-        { "id": "DTWEXBGS", "source": "FRED", "role": "compare", "substitute": false, "note": "Fed 廣義美元，非 DXY" }
+        { "id": "DTWEXBGS", "source": "FRED", "role": "compare", "substitute": false, "note": "Fed 廣義美元，非 DXY", "lag": "Fed H.10 每週公布" }
       ],
       "derived": null,
       "thresholds": [],
@@ -447,10 +447,10 @@
       "frequency": "daily",
       "release": "FOMC 會議日",
       "series": [
-        { "id": "DFF", "source": "FRED", "role": "main", "substitute": false, "note": "有效聯邦基金利率" },
+        { "id": "DFF", "source": "FRED", "role": "main", "substitute": false, "note": "有效聯邦基金利率", "lag": "官方次一營業日公布" },
         { "id": "DFEDTARU", "source": "FRED", "role": "compare", "substitute": false, "note": "目標區間上限" },
         { "id": "DFEDTARL", "source": "FRED", "role": "compare", "substitute": false, "note": "目標區間下限" },
-        { "id": "DGS10", "source": "FRED", "role": "compare", "substitute": false, "note": "10 年期公債殖利率，講義圖用" }
+        { "id": "UST_DGS10", "source": "UST", "fredBase": "DGS10", "ustType": "daily_treasury_yield_curve", "ustColumn": "10 Yr", "role": "compare", "substitute": false, "note": "10 年期公債殖利率，講義圖用；FRED DGS10 歷史＋美國財政部最新日" }
       ],
       "derived": null,
       "thresholds": [],
@@ -470,7 +470,7 @@
       "frequency": "daily",
       "release": "每營業日 8:00 ET",
       "series": [
-        { "id": "SOFR", "source": "FRED", "role": "main", "substitute": false }
+        { "id": "SOFR", "source": "FRED", "role": "main", "substitute": false, "lag": "官方次一營業日公布" }
       ],
       "derived": null,
       "thresholds": [],
@@ -665,9 +665,9 @@
       "frequency": "daily",
       "release": "每日",
       "series": [
-        { "id": "DBAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Baa 殖利率" },
-        { "id": "DAAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Aaa 殖利率" },
-        { "id": "BAMLC0A4CBBB", "source": "FRED", "role": "compare", "substitute": false, "note": "BBB OAS" },
+        { "id": "DBAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Baa 殖利率", "lag": "FRED 約落後 1 個營業日" },
+        { "id": "DAAA", "source": "FRED", "role": "component", "substitute": false, "note": "Moody's Aaa 殖利率", "lag": "FRED 約落後 1 個營業日" },
+        { "id": "BAMLC0A4CBBB", "source": "FRED", "role": "compare", "substitute": false, "note": "BBB OAS", "lag": "FRED 約落後 1 個營業日" },
         { "id": "BAA10YM", "source": "FRED", "role": "compare", "substitute": false, "note": "Baa 減 10 年公債（月），講義圖用" }
       ],
       "derived": ["spread:DBAA-DAAA"],
@@ -689,16 +689,16 @@
       "frequency": "daily",
       "release": "每日",
       "series": [
-        { "id": "SOFR", "source": "FRED", "role": "component", "substitute": true, "note": "替代：TEDRATE 已於 2022-01 停更" },
-        { "id": "DTB3", "source": "FRED", "role": "component", "substitute": true, "note": "替代：3 個月國庫券" }
+        { "id": "SOFR", "source": "FRED", "role": "component", "substitute": true, "note": "替代：TEDRATE 已於 2022-01 停更", "lag": "官方次一營業日公布" },
+        { "id": "UST_DTB3", "source": "UST", "fredBase": "DTB3", "ustType": "daily_treasury_bill_rates", "ustColumn": "13 WEEKS BANK DISCOUNT", "role": "component", "substitute": true, "note": "替代：3 個月國庫券（貼現率）；FRED DTB3 歷史＋美國財政部最新日" }
       ],
-      "derived": ["spread:SOFR-DTB3"],
+      "derived": ["spread:SOFR-UST_DTB3"],
       "thresholds": [],
       "rule": "銀行間借款利率與國庫券利率之差，衡量銀行體系的信用風險；利差擴大是金融壓力的警訊。",
       "pages": "K 186–187",
       "status": "substitute",
       "external": null,
-      "signal": { "basis": "trend", "series": "SOFR", "minus": "DTB3", "expansionWhen": "below", "window": [3, 12], "note": "替代：SOFR − 3 個月國庫券利差收窄＝擴張" }
+      "signal": { "basis": "trend", "series": "SOFR", "minus": "UST_DTB3", "expansionWhen": "below", "window": [3, 12], "note": "替代：SOFR − 3 個月國庫券利差收窄＝擴張" }
     },
     {
       "id": "tips-spread",
@@ -733,7 +733,8 @@
       "frequency": "daily",
       "release": "每日",
       "series": [
-        { "id": "VIXCLS", "source": "FRED", "role": "main", "substitute": false }
+        { "id": "CBOE_VIX", "source": "CBOE", "cboeSymbol": "VIX", "role": "main", "substitute": false, "note": "Cboe 官方收盤" },
+        { "id": "VIXCLS", "source": "FRED", "role": "compare", "substitute": false, "note": "FRED 對照（約落後 1 個營業日）", "lag": "FRED 約落後 1 個營業日" }
       ],
       "derived": null,
       "thresholds": [
@@ -745,7 +746,7 @@
       "pages": "K 191–193",
       "status": "ok",
       "external": null,
-      "signal": { "basis": "raw", "series": "VIXCLS", "expansionWhen": "below", "neutralBand": [20, 30], "note": "< 20 平靜、20–30 中性、> 30 恐慌" }
+      "signal": { "basis": "raw", "series": "CBOE_VIX", "expansionWhen": "below", "neutralBand": [20, 30], "note": "< 20 平靜、20–30 中性、> 30 恐慌" }
     }
   ]
 }

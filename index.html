@@ -229,7 +229,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p class="credit">Caspar David Friedrich〈霧海上的旅人〉Wanderer above the Sea of Fog（c. 1818）・Hamburger Kunsthalle・Public domain, via <a href="https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" target="_blank" rel="noopener">Wikimedia Commons</a></p>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.10.1</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.12.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -249,7 +249,7 @@ const DISPLAY_RULES = {
   'pce-price-index': { mode: 'yoy' },
   'm2-money-supply': { mode: 'yoy' },
   'credit-spreads': { mode: 'spread', a: 'DBAA', b: 'DAAA' },
-  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'DTB3' }
+  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'UST_DTB3' }
 };
 const MODE_LABEL = {
   mom: '月增減（千人）',
@@ -257,7 +257,14 @@ const MODE_LABEL = {
   spread: '利差（百分點）',
   raw: '原值'
 };
-const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA' };
+const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA', CBOE: 'Cboe', UST: 'FRED＋美國財政部' };
+// 來源列文字：「來源: 序列代碼」，series 有 lag 時加註延遲（DA-10）
+function sourceText(ids, defOf) {
+  return ids.map(id => {
+    const d = defOf(id);
+    return (SOURCE_LABEL[d.source] || d.source || '來源未標') + ': ' + id + (d.lag ? '（延遲：' + d.lag + '）' : '');
+  }).join('；');
+}
 const TIMING = { L: '領先', C: '同時', G: '落後' };
 
 const seriesCache = new Map();
@@ -426,7 +433,7 @@ async function buildCard(ind) {
     ? '<div><span class="badge-sub">替代</span> <span class="mode">替代序列：' +
       esc((subUsed.length ? subUsed.map(s => s.id) : ids).join('、')) + '</span></div>'
     : '';
-  const srcText = ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
+  const srcText = sourceText(ids, defOf);
 
   const card = el('<div class="card">' + headHtml(ind) + subBadge +
     '<div class="value-row"><span class="value">' + fmtNum(last[1], mode) + '</span>' + changeHtml + '</div>' +
@@ -652,7 +659,7 @@ async function openDetail(ind) {
   const plan = detailPlan(ind);
   const defOf = id => (ind.series || []).find(x => x.id === id) || {};
   const isSub = ind.status === 'substitute' || plan.ids.some(id => defOf(id).substitute);
-  const srcText = plan.ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
+  const srcText = sourceText(plan.ids, defOf);
   const tag = ind.timing ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>' : '';
   dlg.querySelector('.dhead').innerHTML =
     '<h2 class="dtitle" id="detail-title">' + esc(ind.name_zh) + '<span class="en">' + esc(ind.name_en) + '</span></h2>' +

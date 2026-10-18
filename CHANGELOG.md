@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.12.0 — 2026-10-18
+- DA-10 日資料改用即時來源：`tools/fetch-data.mjs` 新增 CBOE（Cboe 官方 VIX 歷史 CSV）與 UST（FRED 歷史＋美國財政部每日利率 CSV 最新日，同日以 FRED 為準；任一邊失敗不覆寫）來源；VIX 主序列改 `CBOE_VIX`、聯邦基金利率對照改 `UST_DGS10`、TED 利差成分改 `UST_DTB3`，皆比 FRED 早 1 個營業日、重疊期間與 FRED 100% 相同；維持 FRED 的序列加 `lag` 欄位，卡片與詳細圖來源列顯示「延遲」註記；比對與來源決定表寫入 DA-04 決策檔，SU-02 補新欄位格式，README、指標清單同步
+
 ## 0.10.1 — 2026-10-18
 - DC-01 README 補齊：資料來源依 FRED／Yahoo（非官方）／EIA／TradingView（非官方）／衍生序列列出序列代碼、替代序列與無公開資料指標、各來源條款連結；更新資料步驟（Node 24、先 fetch 再 derive、失敗不覆蓋舊檔）、本機預覽（HTTP server）、專案結構；TODO 新增 DA-11（FED Watch 來源）、UI-15（指標細項說明內容／來源／判斷標準）
 
