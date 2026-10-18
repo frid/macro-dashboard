@@ -18,7 +18,6 @@
 - [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日
 
 # 畫面
-- [ ] UI-01 版面骨架：頁首、六大分類分區（C／I／G／NX／MC／IFU）、指標卡片（名稱、最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料日期）
 - [ ] UI-02 指標詳細圖：點卡片展開，照講義格式「原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影」，下方配 YoY 圖；門檻線（PMI 50、Sahm 0.5、Philly Fed 0、期限利差 0、債務 YoY 3%、損益兩平通膨 2%、VIX 12／20／30、YoY 0 線）；支援雙軸對照（如初領 vs 續領）
 - [ ] UI-03 綜合訊號總覽：依講義「越多指標指向同方向越可信」[K 4]，列出各指標目前偏擴張／偏收縮的燈號與統計
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
@@ -28,12 +27,14 @@
 - [ ] UI-08 Indicator 要顯示更日期、預估下次更新日期、與還有幾天 (有顏色表示)。注意時區 (台灣跟美國時差)
 - [ ] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）
   - 要你決定：製作者署名寫法（姓名／EMBA 班別／聯絡方式）、是否加授權聲明（如程式 MIT、內容僅供課堂學習）
+- [ ] UI-10 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）、SOFR 卡是否該標「替代」（SOFR.json substitute=true，但 SOFR 本身是 MC 指標主序列）
 
 # 文件
 - [ ] DC-01 README：用途、線上網址、資料來源、如何本機更新資料
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-01 版面骨架 `index.html`：頁首、六大分類分區、32 張指標卡片（最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料截至日）；暫行顯示規則表（NFP 月增減、CPI／PPI／PCE／M2 年增率、信用／TED 利差），待補 6 張灰卡、替代徽章，最小頁尾（完成 2026-10-18）
 - [x] DA-02 抓資料腳本 `tools/fetch-data.mjs`（Node 24、零套件）：從 FRED 公開 CSV 抓序列 → `data/series/<ID>.json`；含 NBER 衰退期 `USREC`；只留 1970-01-01 起，61 個序列，格式定案寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] SU-04 建立 `dev` 分支流程：任務 worktree 從 `dev` 開出、`task-release` 收尾合併進 `dev`、說「release」才用新的 `project-release` skill 把 `dev` 合併到 `main`；CLAUDE.md、task-next、task-release、worker agents 同步（完成 2026-10-18）
 - [x] DA-01 指標目錄 `data/indicators.json`：32 個指標（C 7／I 6／G 2／NX 3／MC 6／IFU 8）＋NBER 衰退期 `USREC`，格式定案寫入 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）

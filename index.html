@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>總體經濟指標 Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/6.1.0/echarts.min.js" integrity="sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD" crossorigin="anonymous"></script>
+<style>
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --text: #1f2933;
+  --muted: #6b7785;
+  --border: #dde1e7;
+  --up: #1f6fb5;
+  --down: #d2691e;
+  --accent: #2b4a6f;
+  --sub: #b45309;
+  --sub-bg: #fef3c7;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+  line-height: 1.5;
+}
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: 24px 16px;
+}
+header .inner, main, footer { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+header .inner { padding: 0; }
+header h1 { margin: 0 0 4px; font-size: 1.6rem; }
+header p { margin: 2px 0; font-size: .92rem; opacity: .92; }
+main { padding-top: 16px; padding-bottom: 24px; }
+section.cat { margin-bottom: 28px; }
+section.cat h2 {
+  font-size: 1.15rem;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--accent);
+}
+section.cat h2 .en { color: var(--muted); font-weight: normal; font-size: .95rem; margin-left: 6px; }
+section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85rem; margin-left: 8px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.card.pending { background: #eceef1; color: var(--muted); }
+.card.error { border-color: #c0392b; }
+.card .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+.card .name-zh { font-weight: 600; font-size: 1rem; }
+.card .name-en { color: var(--muted); font-size: .8rem; }
+.tag {
+  flex: none;
+  font-size: .72rem;
+  padding: 1px 7px;
+  border-radius: 10px;
+  background: #e3ebf5;
+  color: var(--accent);
+  white-space: nowrap;
+  cursor: default;
+}
+.badge-sub {
+  display: inline-block;
+  font-size: .72rem;
+  padding: 1px 7px;
+  border-radius: 4px;
+  background: var(--sub-bg);
+  color: var(--sub);
+  font-weight: 600;
+}
+.value-row { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.value { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.change { font-size: .88rem; font-variant-numeric: tabular-nums; }
+.change.up { color: var(--up); }
+.change.down { color: var(--down); }
+.change.flat { color: var(--muted); }
+.mode { font-size: .75rem; color: var(--muted); }
+.spark { width: 100%; height: 48px; }
+.meta { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+.errmsg { color: #c0392b; font-size: .85rem; word-break: break-all; }
+.fatal { background: #fdecea; border: 1px solid #c0392b; color: #7b241c; padding: 16px; border-radius: 8px; margin: 16px 0; }
+footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <h1>總體經濟指標 Dashboard</h1>
+    <p>依郭維裕教授講義《Fantastic Economic Indicators》整理（政大 EMBA「生技產業之投資分析與個案探討」）。</p>
+    <p>指標依 GDP = C（消費）＋ I（投資）＋ G（政府）＋ NX（淨出口）分類，另加 MC（多重成分）與 IFU（通膨／恐慌／不確定）。</p>
+  </div>
+</header>
+<main id="app"><p>載入中…</p></main>
+<footer>版本 <span id="app-version">0.4.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+
+<script>
+'use strict';
+
+// 暫行顯示規則（以指標 id 為 key），DA-05 完成後改用正式衍生計算。
+//   mom    : 月增減（與前一期相減，單位同序列，PAYEMS 為千人）
+//   yoy    : 年增率 %（與一年前比）
+//   spread : 兩條 component 序列按日期對齊相減（百分點）
+const DISPLAY_RULES = {
+  'nonfarm-payrolls': { mode: 'mom' },
+  'cpi': { mode: 'yoy' },
+  'ppi': { mode: 'yoy' },
+  'pce-price-index': { mode: 'yoy' },
+  'm2-money-supply': { mode: 'yoy' },
+  'credit-spreads': { mode: 'spread', a: 'DBAA', b: 'DAAA' },
+  'ted-spread': { mode: 'spread', a: 'SOFR', b: 'DTB3' }
+};
+const MODE_LABEL = {
+  mom: '月增減（千人）',
+  yoy: '年增率',
+  spread: '利差（百分點）',
+  raw: '原值'
+};
+const TIMING = { L: '領先', C: '同時', G: '落後' };
+
+const seriesCache = new Map();
+function loadSeries(id) {
+  if (!seriesCache.has(id)) {
+    const url = 'data/series/' + id + '.json';
+    seriesCache.set(id, fetch(url).then(r => {
+      if (!r.ok) throw new Error(url + ' 讀取失敗（HTTP ' + r.status + '）');
+      return r.json();
+    }).catch(e => { throw new Error(url + '：' + e.message); }));
+  }
+  return seriesCache.get(id);
+}
+
+function validObs(s) {
+  return s.observations.filter(o => o[1] !== null && o[1] !== undefined);
+}
+
+// 找 date 以前（含）最後一筆，obs 已按日期升序
+function lastOnOrBefore(obs, date) {
+  let lo = 0, hi = obs.length - 1, ans = -1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (obs[mid][0] <= date) { ans = mid; lo = mid + 1; } else hi = mid - 1;
+  }
+  return ans;
+}
+function yearAgo(date) {
+  const y = parseInt(date.slice(0, 4), 10) - 1;
+  let md = date.slice(5);
+  if (md === '02-29') md = '02-28';
+  return y + '-' + md;
+}
+
+function transform(mode, obsMain, obsB) {
+  if (mode === 'mom') {
+    return obsMain.slice(1).map((o, i) => [o[0], o[1] - obsMain[i][1]]);
+  }
+  if (mode === 'yoy') {
+    const out = [];
+    for (let i = 0; i < obsMain.length; i++) {
+      const t = yearAgo(obsMain[i][0]);
+      if (t < obsMain[0][0]) continue;
+      const j = lastOnOrBefore(obsMain, t);
+      if (j < 0 || obsMain[j][1] === 0) continue;
+      out.push([obsMain[i][0], (obsMain[i][1] / obsMain[j][1] - 1) * 100]);
+    }
+    return out;
+  }
+  if (mode === 'spread') {
+    const m = new Map(obsB);
+    const out = [];
+    for (const [d, v] of obsMain) if (m.has(d)) out.push([d, v - m.get(d)]);
+    return out;
+  }
+  return obsMain;
+}
+
+function fmtDate(d, freq) {
+  if (freq === 'monthly') return d.slice(0, 7);
+  if (freq === 'quarterly') {
+    return d.slice(0, 4) + ' Q' + (Math.floor((parseInt(d.slice(5, 7), 10) - 1) / 3) + 1);
+  }
+  if (freq === 'annual') return d.slice(0, 4);
+  return d;
+}
+function fmtNum(v, mode) {
+  const abs = Math.abs(v);
+  let digits = 2;
+  if (mode === 'raw' || mode === 'mom') {
+    if (abs >= 10000) digits = 0;
+    else if (abs >= 1000) digits = 1;
+  }
+  let s = v.toLocaleString('en-US', { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  if (mode === 'yoy') s += '%';
+  return s;
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function el(html) {
+  const t = document.createElement('template');
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+function headHtml(ind) {
+  const tag = ind.timing
+    ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>'
+    : '';
+  return '<div class="head"><div><div class="name-zh">' + esc(ind.name_zh) + '</div>' +
+    '<div class="name-en">' + esc(ind.name_en) + '</div></div>' + tag + '</div>';
+}
+
+function seriesIdsFor(ind) {
+  const rule = DISPLAY_RULES[ind.id];
+  if (rule && rule.mode === 'spread') return [rule.a, rule.b];
+  const main = (ind.series || []).find(s => s.role === 'main');
+  return main ? [main.id] : [];
+}
+
+async function buildCard(ind) {
+  if (ind.status === 'pending' || !(ind.series && ind.series.length)) {
+    const ext = ind.external && ind.external.name
+      ? '<div class="mode">原始來源：' + esc(ind.external.name) + '</div>' : '';
+    return el('<div class="card pending">' + headHtml(ind) +
+      '<div class="value" style="font-size:1.1rem">資料待補（DA-04）</div>' + ext +
+      '<div class="meta"><span>' + esc(ind.pages || '') + '</span></div></div>');
+  }
+
+  const ids = seriesIdsFor(ind);
+  if (!ids.length) {
+    return el('<div class="card error">' + headHtml(ind) +
+      '<div class="errmsg">找不到主序列（indicators.json 此指標無 role=main）</div></div>');
+  }
+  let loaded;
+  try {
+    loaded = await Promise.all(ids.map(loadSeries));
+  } catch (e) {
+    return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">' + esc(e.message) + '</div></div>');
+  }
+
+  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
+  const mode = rule.mode;
+  const obsMain = validObs(loaded[0]);
+  const obsB = loaded[1] ? validObs(loaded[1]) : null;
+  const pts = transform(mode, obsMain, obsB);
+  if (pts.length === 0) {
+    return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">序列 ' + esc(ids.join('、')) + ' 無有效資料</div></div>');
+  }
+
+  const last = pts[pts.length - 1];
+  const prev = pts.length > 1 ? pts[pts.length - 2] : null;
+  const freq = loaded[0].frequency || ind.frequency;
+
+  let changeHtml = '<span class="change flat">—</span>';
+  if (prev) {
+    const diff = last[1] - prev[1];
+    const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'flat';
+    const arrow = diff > 0 ? '▲' : diff < 0 ? '▼' : '■';
+    const dg = (mode === 'mom' || mode === 'raw') && Math.abs(diff) >= 1000 ? 0 : 2;
+    let txt = Math.abs(diff).toLocaleString('en-US', { minimumFractionDigits: dg, maximumFractionDigits: dg });
+    if (mode === 'yoy' || mode === 'spread') txt += ' 個百分點';
+    else if (mode === 'raw' && prev[1] !== 0) txt += '（' + (Math.abs(diff / prev[1]) * 100).toFixed(2) + '%）';
+    changeHtml = '<span class="change ' + cls + '" title="與前一期（' + esc(fmtDate(prev[0], freq)) + '）比較">' + arrow + ' ' + txt + '</span>';
+  }
+
+  const subUsed = loaded.filter(s => s.substitute);
+  const isSub = ind.status === 'substitute' || subUsed.length > 0;
+  const subBadge = isSub
+    ? '<div><span class="badge-sub">替代</span> <span class="mode">替代序列：' +
+      esc((subUsed.length ? subUsed.map(s => s.id) : ids).join('、')) + '</span></div>'
+    : '';
+  const srcText = 'FRED: ' + ids.join(', ');
+
+  const card = el('<div class="card">' + headHtml(ind) + subBadge +
+    '<div class="value-row"><span class="value">' + fmtNum(last[1], mode) + '</span>' + changeHtml + '</div>' +
+    '<div class="mode">' + MODE_LABEL[mode] + '</div>' +
+    '<div class="spark"></div>' +
+    '<div class="meta"><span>資料截至 ' + esc(fmtDate(last[0], freq)) + '</span><span>' + esc(ind.pages || '') + '</span></div>' +
+    '<div class="meta"><span>' + esc(srcText) + '</span></div></div>');
+  card._spark = pts;
+  return card;
+}
+
+function drawSpark(card) {
+  const pts = card._spark;
+  if (!pts || !window.echarts) return;
+  const lastDate = pts[pts.length - 1][0];
+  const cut = (parseInt(lastDate.slice(0, 4), 10) - 5) + lastDate.slice(4);
+  let data = pts.filter(p => p[0] >= cut);
+  if (data.length < 2) data = pts.slice(-60);
+  const chart = echarts.init(card.querySelector('.spark'), null, { renderer: 'svg' });
+  chart.setOption({
+    animation: false,
+    grid: { left: 2, right: 2, top: 4, bottom: 4 },
+    xAxis: { type: 'time', show: false },
+    yAxis: { type: 'value', show: false, scale: true },
+    series: [{
+      type: 'line', data: data, showSymbol: false, silent: true,
+      lineStyle: { width: 1.5, color: '#2b4a6f' },
+      areaStyle: { color: 'rgba(43,74,111,0.08)' }
+    }]
+  });
+  window.addEventListener('resize', () => chart.resize());
+}
+
+async function main() {
+  const app = document.getElementById('app');
+  let cat;
+  try {
+    const r = await fetch('data/indicators.json');
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    cat = await r.json();
+  } catch (e) {
+    app.innerHTML = '<div class="fatal"><strong>無法讀取 data/indicators.json</strong>（' + esc(e.message) +
+      '）。<br>本頁需透過 HTTP 伺服器開啟，直接用 file:// 開啟會被瀏覽器擋下 fetch。可在專案目錄執行 <code>python3 -m http.server</code> 後瀏覽 http://localhost:8000/。</div>';
+    return;
+  }
+
+  app.innerHTML = '';
+  const jobs = [];
+  for (const c of cat.categories) {
+    const inds = cat.indicators.filter(i => i.category === c.id);
+    const sec = el('<section class="cat" id="cat-' + esc(c.id) + '"><h2>' + esc(c.id) + '　' + esc(c.name_zh) +
+      '<span class="en">' + esc(c.name_en) + '</span><span class="count">' + inds.length + ' 項指標</span></h2><div class="grid"></div></section>');
+    const grid = sec.querySelector('.grid');
+    app.appendChild(sec);
+    for (const ind of inds) {
+      const slot = el('<div class="card"><div class="name-zh">' + esc(ind.name_zh) + '</div><div class="mode">載入中…</div></div>');
+      grid.appendChild(slot);
+      jobs.push(buildCard(ind).then(card => {
+        grid.replaceChild(card, slot);
+        drawSpark(card);
+      }));
+    }
+  }
+  await Promise.all(jobs);
+}
+main();
+</script>
+</body>
+</html>
