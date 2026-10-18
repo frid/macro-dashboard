@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.10.1 — 2026-10-18
+- DC-01 README 補齊：資料來源依 FRED／Yahoo（非官方）／EIA／TradingView（非官方）／衍生序列列出序列代碼、替代序列與無公開資料指標、各來源條款連結；更新資料步驟（Node 24、先 fetch 再 derive、失敗不覆蓋舊檔）、本機預覽（HTTP server）、專案結構；TODO 新增 DA-11（FED Watch 來源）、UI-15（指標細項說明內容／來源／判斷標準）
+
 ## 0.10.0 — 2026-10-18
 - UI-02 指標詳細圖：卡片可點（含鍵盤），開啟 `<dialog>` 顯示講義格式詳細圖——原值＋3 月均（QMA）＋12 月均（YMA，依日期視窗計算，依 `derived` 決定是否畫）＋NBER 衰退灰帶（USREC），下方 YoY 圖固定 0 線；門檻虛線讀 `thresholds[]`，新增 `on:"yoy"`（畫在 YoY 圖）與 `series`（只對特定序列畫，修正預算赤字 −3 線錯置）；`series[].axis` 支援雙軸對照 [K 18, 22, 44, 77]；lttb 降取樣、上下圖連動 dataZoom（預設近 20 年）；`?detail=<id>` 直接開啟；SU-02 決策檔補新欄位；TODO 新增 DA-12、DA-13
 
