@@ -2,6 +2,8 @@
 
 總體經濟指標 Dashboard。依政大 EMBA「生技產業之投資分析與個案探討」郭維裕教授講義《Fantastic Economic Indicators》（`Docs/Ref/`）建立，指標依 GDP = C + I + G + NX 分類，另加 MC（多重成分）與 IFU（通膨／恐慌／不確定）。
 
+# 開發: 用中文
+
 ## 架構（SU-02 定案）
 
 - 純前端靜態網頁，預計部署 GitHub Pages；不需後端。
