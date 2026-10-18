@@ -322,7 +322,8 @@
       "pages": "K 67–68",
       "status": "ok",
       "external": null,
-      "signal": null
+      "signal": null,
+      "light": { "series": "DRV_DEFICIT_GDP", "rules": [{ "when": "below", "value": -3, "light": "R" }], "else": "G", "note": "赤字占 GDP 超過 3% 為財政壓力警戒線 [K 67–68]" }
     },
     {
       "id": "us-debt-leverage",
@@ -374,7 +375,8 @@
       "pages": "K 69–91",
       "status": "ok",
       "external": null,
-      "signal": null
+      "signal": null,
+      "light": { "series": "DRV_GFDEBTN_YOY", "rules": [{ "when": "above", "value": 3, "light": "Y" }], "else": "G", "note": "聯邦總債務年增率超過 3% 為累積加速，再觀察 [K 69–91]" }
     },
     {
       "id": "baltic-dry-index",
@@ -653,7 +655,8 @@
       "pages": "K 178–182",
       "status": "ok",
       "external": null,
-      "signal": null
+      "signal": null,
+      "light": { "series": "DRV_PCE_YOY", "rules": [{ "when": "above", "value": 2, "light": "Y" }], "else": "G", "note": "PCE 年增率高於 Fed 2% 目標為警告 [K 178–182]" }
     },
     {
       "id": "credit-spreads",
@@ -721,7 +724,8 @@
       "pages": "K 188–190",
       "status": "ok",
       "external": null,
-      "signal": null
+      "signal": null,
+      "light": { "series": "T10YIE", "rules": [{ "when": "atOrAbove", "value": 2, "light": "Y" }], "else": "G", "note": "預期通膨 ≥ 2% 時 Fed 升息壓力較大 [K 188–190]" }
     },
     {
       "id": "vix",

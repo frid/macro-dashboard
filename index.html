@@ -107,6 +107,25 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .card .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
 .card .name-zh { font-weight: 600; font-size: 1rem; }
 .card .name-en { color: var(--muted); font-size: .8rem; }
+.card .head-r { flex: none; display: flex; align-items: center; gap: 4px; }
+/* 燈號 pill（UI-11）：G 綠＝沒問題、Y 黃＝警告再觀察、R 紅＝危險、— 灰＝未判 */
+.lamp {
+  flex: none;
+  min-width: 1.7em;
+  text-align: center;
+  font-size: .72rem;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 10px;
+  border: 1px solid var(--neu);
+  background: var(--pending-bg);
+  color: var(--muted);
+  white-space: nowrap;
+  cursor: default;
+}
+.lamp.G { border-color: var(--sig-up); background: var(--sig-up-bg); color: var(--sig-up); }
+.lamp.Y { border-color: var(--sig-flat); background: var(--sig-flat-bg); color: var(--sig-flat); }
+.lamp.R { border-color: var(--sig-down); background: var(--sig-down-bg); color: var(--sig-down); }
 .tag {
   flex: none;
   font-size: .72rem;
@@ -162,16 +181,21 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
   min-width: 0;
 }
 .light:hover { border-color: var(--accent); }
-.light.exp { border-left-color: var(--sig-up); background: var(--sig-up-bg); }
-.light.neu { border-left-color: var(--sig-flat); background: var(--sig-flat-bg); }
-.light.con { border-left-color: var(--sig-down); background: var(--sig-down-bg); }
+/* 格子底色依燈號 G／Y／R（UI-11）；擴張／中性／收縮文字顏色仍依 UI-03 狀態 */
+.light.G { border-left-color: var(--sig-up); background: var(--sig-up-bg); }
+.light.Y { border-left-color: var(--sig-flat); background: var(--sig-flat-bg); }
+.light.R { border-left-color: var(--sig-down); background: var(--sig-down-bg); }
 .light.na { background: var(--pending-bg); }
 .light .lhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .light .lname { font-weight: 600; font-size: .9rem; }
 .light .lstate { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
-.light.exp .lstate { color: var(--sig-up); }
-.light.neu .lstate { color: var(--sig-flat); }
-.light.con .lstate { color: var(--sig-down); }
+.light .lstate.exp { color: var(--sig-up); }
+.light .lstate.neu { color: var(--sig-flat); }
+.light .lstate.con { color: var(--sig-down); }
+.sig-lamps { margin: -4px 0 10px; font-size: .9rem; }
+.sig-lamps b.G { color: var(--sig-up); }
+.sig-lamps b.Y { color: var(--sig-flat); }
+.sig-lamps b.R { color: var(--sig-down); }
 .light .lwhy { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; word-break: break-word; }
 .fatal { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger-text); padding: 16px; border-radius: 8px; margin: 16px 0; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
@@ -258,7 +282,7 @@ dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
   <p>本站程式與摘要文字 © 2026 侯榮富；講義內容版權屬郭維裕教授，本站僅為自行摘要；各項數據版權屬原始來源（見上方資料來源）。</p>
   <p>僅供課堂學習，不構成投資建議。引用或轉載本站內容請先經作者同意；數據請依各來源的使用條款。</p>
 </section>
-<footer>版本 <span id="app-version">0.12.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.13.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 <dialog class="detail" id="detail" aria-labelledby="detail-title">
   <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
   <div class="dbody"></div>
@@ -299,7 +323,8 @@ const TIMING = { L: '領先', C: '同時', G: '落後' };
 const seriesCache = new Map();
 function loadSeries(id) {
   if (!seriesCache.has(id)) {
-    const url = 'data/series/' + id + '.json';
+    // DA-05 衍生序列（DRV_ 開頭）放 data/derived/，格式同 data/series/
+    const url = (id.startsWith('DRV_') ? 'data/derived/' : 'data/series/') + id + '.json';
     seriesCache.set(id, fetch(url).then(r => {
       if (!r.ok) throw new Error(url + ' 讀取失敗（HTTP ' + r.status + '）');
       return r.json();
@@ -400,8 +425,10 @@ function headHtml(ind) {
   const tag = ind.timing
     ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>'
     : '';
+  // 燈號 pill 先放灰「—」，綜合訊號算完後由 setLamp 補上（UI-11）
   return '<div class="head"><div><div class="name-zh">' + esc(ind.name_zh) + '</div>' +
-    '<div class="name-en">' + esc(ind.name_en) + '</div></div>' + tag + '</div>';
+    '<div class="name-en">' + esc(ind.name_en) + '</div></div>' +
+    '<span class="head-r">' + tag + '<span class="lamp na" title="燈號判斷中">—</span></span></div>';
 }
 
 function seriesIdsFor(ind) {
@@ -569,13 +596,80 @@ function isSubstituteSignal(ind) {
   return (ind.series || []).some(s => ids.includes(s.id) && s.substitute);
 }
 
+// ---- 燈號（UI-11）：G 綠＝沒問題、Y 黃＝警告再觀察、R 紅＝危險、na＝未判（畫面「—」） ----
+const LIGHT_LABEL = { G: '沒問題', Y: '警告、再觀察', R: '危險', na: '未判' };
+const LIGHT_TEXT = { G: 'G', Y: 'Y', R: 'R', na: '—' };
+// 由綜合訊號推燈號：門檻型（raw／yoy）收縮即越過講義門檻 → R；趨勢型（trend）講義無危險門檻，非擴張一律 Y
+const LIGHT_FROM_SIGNAL = {
+  threshold: { exp: 'G', neu: 'Y', con: 'R' },
+  trend: { exp: 'G', neu: 'Y', con: 'Y' }
+};
+// indicators.json light.rules[].when：最新值 v 對門檻 t
+const LIGHT_WHEN = {
+  above: (v, t) => v > t,
+  atOrAbove: (v, t) => v >= t,
+  below: (v, t) => v < t,
+  atOrBelow: (v, t) => v <= t
+};
+const LIGHT_SYM = { above: '>', atOrAbove: '≥', below: '<', atOrBelow: '≤' };
+
+// 回傳 { light: 'G'|'Y'|'R'|'na', text, note }；不會 throw。
+// 指標有 light 欄位以它為準（序列可為 DRV_ 衍生值）；否則由 evalSignal 的結果 sig 推得。
+async function evalLight(ind, sig) {
+  const lt = ind.light;
+  if (lt) {
+    const note = lt.note || '';
+    let data;
+    try {
+      data = await loadPoints([lt.series], 'raw');
+    } catch (e) {
+      return { light: 'na', text: '資料讀取失敗：' + e.message, note: note };
+    }
+    const last = data.last;
+    if (!last) return { light: 'na', text: '序列 ' + lt.series + ' 無有效資料', note: note };
+    const v = last[1];
+    const unit = data.loaded[0].units === '%' ? '%' : '';
+    const hit = (lt.rules || []).find(r => LIGHT_WHEN[r.when] && LIGHT_WHEN[r.when](v, r.value));
+    const light = hit ? hit.light : (lt.else || 'na');
+    const ruleText = (lt.rules || []).map(r => (LIGHT_SYM[r.when] || r.when) + ' ' + r.value + ' → ' + r.light)
+      .concat(lt.else ? ['其餘 → ' + lt.else] : []).join('；');
+    return {
+      light: light,
+      text: lt.series + ' ' + fmtNum(v, 'raw') + unit + '（' + fmtDate(last[0], data.freq || ind.frequency) + '）；規則：' + ruleText,
+      note: note
+    };
+  }
+  if (!ind.signal) {
+    return { light: 'na', text: ind.status === 'unavailable' ? '無公開資料' : '講義無明確門檻，不判燈號', note: '' };
+  }
+  if (sig.state === 'na') return { light: 'na', text: sig.text, note: ind.signal.note || '' };
+  const map = ind.signal.basis === 'trend' ? LIGHT_FROM_SIGNAL.trend : LIGHT_FROM_SIGNAL.threshold;
+  return {
+    light: map[sig.state] || 'na',
+    text: '綜合訊號「' + STATE_LABEL[sig.state] + '」：' + sig.text,
+    note: ind.signal.note || ''
+  };
+}
+
+function lampTitle(lt) {
+  return '燈號 ' + LIGHT_TEXT[lt.light] + '（' + LIGHT_LABEL[lt.light] + '）：' + lt.text + (lt.note ? '｜' + lt.note : '');
+}
+function lampHtml(lt) {
+  return '<span class="lamp ' + lt.light + '" title="' + esc(lampTitle(lt)) + '">' + LIGHT_TEXT[lt.light] + '</span>';
+}
+// 卡片標題列的燈號 pill：headHtml 先放灰「—」，算完後換成實際燈號
+function setLamp(card, lt) {
+  const old = card.querySelector('.head .lamp');
+  if (old) old.replaceWith(el(lampHtml(lt)));
+}
+
 function summarySection() {
   return el('<section class="cat" id="signal-summary"><h2>綜合訊號總覽<span class="en">Signal Summary</span></h2>' +
     '<p class="sig-lead">單一指標容易誤判；越多指標指向同一方向，訊號越可信 [K 4]。下表依各指標的簡化規則（門檻、年增率或近 3 月對近 12 月均值）判斷目前偏擴張或偏收縮；通膨、利率等方向不單純的指標不計。點燈號可跳到該指標卡片。</p>' +
-    '<div class="sig-verdict">計算中…</div><div class="sig-wrap"></div><div class="sig-grid"></div></section>');
+    '<div class="sig-verdict">計算中…</div><div class="sig-lamps"></div><div class="sig-wrap"></div><div class="sig-grid"></div></section>');
 }
 
-function fillSummary(sec, inds, sigs) {
+function fillSummary(sec, inds, sigs, lights) {
   const states = ['exp', 'neu', 'con', 'na'];
   const rows = ['L', 'C', 'G'];
   if (inds.some(i => !TIMING[i.timing])) rows.push('-');
@@ -604,15 +698,22 @@ function fillSummary(sec, inds, sigs) {
   v.className = 'sig-verdict ' + dir;
   v.textContent = '列入判斷 ' + counted + ' 項：擴張 ' + a.exp + '、中性 ' + a.neu + '、收縮 ' + a.con + ' → ' + dirText + '（不計 ' + a.na + ' 項）';
 
+  // 燈號匯總（UI-11）：全部指標都算，未判＝講義無門檻或資料不足
+  const lc = { G: 0, Y: 0, R: 0, na: 0 };
+  lights.forEach(lt => { lc[lt.light] = (lc[lt.light] || 0) + 1; });
+  sec.querySelector('.sig-lamps').innerHTML = '燈號（G 沒問題／Y 警告、再觀察／R 危險）：' +
+    '<b class="G">G ' + lc.G + '</b>／<b class="Y">Y ' + lc.Y + '</b>／<b class="R">R ' + lc.R + '</b>／未判 ' + lc.na;
+
   const grid = sec.querySelector('.sig-grid');
   inds.forEach((ind, k) => {
     const sg = sigs[k];
+    const lt = lights[k];
     const tag = ind.timing ? '<span class="tag">' + TIMING[ind.timing] + '</span>' : '';
     const sub = isSubstituteSignal(ind) ? '<span class="badge-sub">替代</span>' : '';
     const note = ind.signal && ind.signal.note ? ind.signal.note : '';
-    grid.appendChild(el('<a class="light ' + sg.state + '" href="#ind-' + esc(ind.id) + '" title="' + esc(note) + '">' +
-      '<div class="lhead"><span class="lname">' + esc(ind.name_zh) + '</span>' + tag + sub +
-      '<span class="lstate">' + STATE_LABEL[sg.state] + '</span></div>' +
+    grid.appendChild(el('<a class="light ' + lt.light + '" href="#ind-' + esc(ind.id) + '" title="' + esc(note) + '">' +
+      '<div class="lhead">' + lampHtml(lt) + '<span class="lname">' + esc(ind.name_zh) + '</span>' + tag + sub +
+      '<span class="lstate ' + sg.state + '">' + STATE_LABEL[sg.state] + '</span></div>' +
       '<div class="lwhy">' + esc(sg.text) + '</div></a>'));
   });
 }
@@ -863,6 +964,8 @@ async function main() {
   const summary = summarySection();
   app.appendChild(summary);
   const sigJob = Promise.all(cat.indicators.map(evalSignal));
+  // 燈號沿用綜合訊號結果，不重複判斷；序列走 seriesCache，不重複下載
+  const lightJob = sigJob.then(sigs => Promise.all(cat.indicators.map((ind, k) => evalLight(ind, sigs[k]))));
   const jobs = [];
   for (const c of cat.categories) {
     const inds = cat.indicators.filter(i => i.category === c.id);
@@ -879,11 +982,12 @@ async function main() {
         grid.replaceChild(card, slot);
         drawSpark(card);
         if (card._spark) makeClickable(card, ind);
+        return lightJob.then(lights => setLamp(card, lights[cat.indicators.indexOf(ind)]));
       }));
     }
   }
   await Promise.all(jobs);
-  fillSummary(summary, cat.indicators, await sigJob);
+  fillSummary(summary, cat.indicators, await sigJob, await lightJob);
 }
 main();
 </script>
