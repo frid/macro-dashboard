@@ -120,6 +120,26 @@ TradingView 圖表資料的取得方式為非官方協定，僅供學習使用�
 | `DRV_DEFICIT_GDP` | 預算赤字與國債 | 近 12 個月赤字占 GDP（%） |
 | `DRV_BEVERIDGE` | Beveridge 曲線 | 失業率與職缺率配對 |
 
+以下為債務圖組衍生序列（DA-07，共 21 個：7 種債務 × 3 種序列）。講義對同一種債務以「水準／YoY／占 GDP／占 GDP 的 YoY」一組呈現 [K 69–91]；水準即 `data/series/` 的原序列，不另存衍生檔，這裡只列另外三種。
+
+| 債務類別（序列代碼） | 年增率 | 占 GDP 比 | 占 GDP 比的年增率 |
+|---|---|---|---|
+| 聯邦總債務 `GFDEBTN` | `DRV_GFDEBTN_YOY` | `DRV_GFDEBTN_GDP` | `DRV_GFDEBTN_GDP_YOY` |
+| 住宅房貸 `HMLBSHNO` | `DRV_HMLBSHNO_YOY` | `DRV_HMLBSHNO_GDP` | `DRV_HMLBSHNO_GDP_YOY` |
+| 家庭持有房貸資產 `MABSHNO`（FRED 定義為資產面，非負債） | `DRV_MABSHNO_YOY` | `DRV_MABSHNO_GDP` | `DRV_MABSHNO_GDP_YOY` |
+| 商業房貸 `CMLBSHNO` | `DRV_CMLBSHNO_YOY` | `DRV_CMLBSHNO_GDP` | `DRV_CMLBSHNO_GDP_YOY` |
+| 學生貸款 `SLOASM` | `DRV_SLOASM_YOY` | `DRV_SLOASM_GDP` | `DRV_SLOASM_GDP_YOY` |
+| 循環信用 `REVOLSL`（月資料） | `DRV_REVOLSL_YOY` | `DRV_REVOLSL_GDP` | `DRV_REVOLSL_GDP_YOY` |
+| 汽車貸款 `MVLOASM` | `DRV_MVLOASM_YOY` | `DRV_MVLOASM_GDP` | `DRV_MVLOASM_GDP_YOY` |
+
+三種序列的算法（輸入序列為債務代碼與 `GDP`）：
+
+- **年增率**：本期 ÷ 12 個月前同期 − 1，×100（%）。
+- **占 GDP 比**：債務（百萬美元）÷（所屬季名目 GDP（十億美元，季調年率）× 1000）× 100（%）。債務為存量、GDP 已是年率，不再年化。所屬季 GDP 尚未公布時改用最新一季 GDP，範圍記在 `check.gdp_fallback`。`REVOLSL` 為月資料，只取季末月（3／6／9／12 月）對該季 GDP。
+- **占 GDP 比的年增率**：先以 4 位小數算占 GDP 比，再算其年增率（%）。
+
+`DRV_GFDEBTN_GDP` 另以 FRED `GFDEGDQ188S`（聯邦債務占 GDP，季）同日期值做 `check` 比對；該序列只用於檢查，不列入 `inputs`。
+
 ## 技術
 
 純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，部署於 GitHub Pages（`main` 分支根目錄）。圖表庫為 Apache ECharts 6.1.0（CDN 載入），選型決策見 [doc/decisions/SU-02-技術選型.md](doc/decisions/SU-02-技術選型.md)。
