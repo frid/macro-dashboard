@@ -6,7 +6,6 @@
 5. 講義頁碼寫 `[K 頁碼]`（整份 193 頁的頁碼；1-1 檔 = 1–128，1-2 檔 = 129–193）。
 
 # 專案設定
-- [ ] SU-02 技術選型定案：單檔 `index.html`＋`data/*.json`；圖表庫 CDN（建議 Apache ECharts，時間序列、雙軸、散佈圖、衰退陰影都內建）
 
 # 資料
 - [ ] DA-01 指標目錄 `data/indicators.json`：依 `doc/reference/指標清單.md` 建立（分類、領先／同時／落後、來源、序列代碼、頻率、公布時間、判讀規則、講義頁碼）
@@ -36,6 +35,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] SU-02 技術選型定案：單檔 `index.html`＋`data/*.json`，圖表庫 Apache ECharts 6.1.0（cdnjs＋SRI），決策紀錄 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
 - [x] SU-01 建立 GitHub repo 與 GitHub Pages 部署：公開 repo `frid/macro-dashboard`，Pages 從 `main` 根目錄發佈 <https://frid.github.io/macro-dashboard/>（完成 2026-10-18）
 - [x] SU-03 講義圖片頁整理（約 115 頁圖表），寫成 `doc/reference/郭維裕講義-圖表頁摘要.md`，並回填 `doc/reference/指標清單.md`（完成 2026-10-18）
 - [x] SU-00 建立專案管理檔案：CLAUDE.md、TODO.md、VERSION、CHANGELOG.md、README.md、.gitignore、task-next／task-release skills、worker／verifier agents、指標清單（完成 2026-10-18）

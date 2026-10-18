@@ -28,7 +28,7 @@
 
 ## 技術
 
-純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，部署於 GitHub Pages（`main` 分支根目錄）。
+純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，部署於 GitHub Pages（`main` 分支根目錄）。圖表庫為 Apache ECharts 6.1.0（CDN 載入），選型決策見 [doc/decisions/SU-02-技術選型.md](doc/decisions/SU-02-技術選型.md)。
 
 ## 聲明
 
