@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.11.0 — 2026-10-18
+- UI-09 版權說明：頁尾前加可摺疊「關於本站」區塊——資料來源與使用條款（FRED、EIA、Yahoo Finance、TradingView、衍生序列、替代序列）、講義出處（郭維裕《Fantastic Economic Indicators》，自行摘要 [K 頁碼]）、製作者侯榮富 博士、版權歸屬（程式與摘要／講義／數據三方）與「僅供課堂學習、不構成投資建議、引用轉載須經作者同意」聲明；README 聲明段同步
+
 ## 0.10.1 — 2026-10-18
 - DC-01 README 補齊：資料來源依 FRED／Yahoo（非官方）／EIA／TradingView（非官方）／衍生序列列出序列代碼、替代序列與無公開資料指標、各來源條款連結；更新資料步驟（Node 24、先 fetch 再 derive、失敗不覆蓋舊檔）、本機預覽（HTTP server）、專案結構；TODO 新增 DA-11（FED Watch 來源）、UI-15（指標細項說明內容／來源／判斷標準）
 
