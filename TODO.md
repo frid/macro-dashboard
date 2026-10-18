@@ -10,7 +10,6 @@
 # 資料
 - [ ] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
   - DA-04 起含 TradingView WebSocket 來源：要實測雲端 IP 能否連線；不行就在 Actions 跳過該來源、保留舊檔
-- [ ] DA-05 衍生指標計算：NFP 月增減、Sahm Rule（自算對照 `SAHMREALTIME`）、CPI／PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 曲線資料對
 - [ ] DA-06 台灣指標是否納入（國發會景氣對策信號、台灣 PMI 等）
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
 - [ ] DA-07 G 區債務圖組：抓 `GFDEBTN`、`HMLBSHNO`、`MABSHNO`、`CMLBSHNO`、`SLOASM`、`REVOLSL`、`MVLOASM`、`GDP`，算 YoY 與占 GDP 比 [K 69–91]
@@ -33,12 +32,14 @@
 - [ ] UI-11 每一個 BLOCK 要有 G（綠色：代表沒問題）、Y（黃色：代表警告、再觀察）、R（紅色：代表危險）
   - 與 UI-03 綜合訊號總覽相關；各指標的 G／Y／R 門檻要依講義判讀規則定
 - [ ] UI-12 卡片數值細修：加單位（如美國債務 GFDEBTN 百萬美元、預算赤字）、原值接近 0 或為負時不顯示百分比變動（如 Sahm 0.00→▲100%）
+- [ ] UI-13 卡片改讀 `data/derived/` 衍生序列（依 `indicators.json` 的 `derived_series`），取代 `index.html` 暫行規則表（DA-05 已產出）
 
 # 文件
 - [ ] DC-01 README：用途、線上網址、資料來源、如何本機更新資料
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-05 衍生指標計算：新增 `tools/derive-data.mjs`，由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/`（NFP 月增減／年增率、自算 Sahm Rule（對照 SAHMREALTIME）、CPI／核心 CPI／PCE／核心 PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 資料對）；`indicators.json` 加 `derived_series`，格式寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] UI-01 版面骨架 `index.html`：頁首、六大分類分區、32 張指標卡片（最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料截至日）；暫行顯示規則表（NFP 月增減、CPI／PPI／PCE／M2 年增率、信用／TED 利差），來源標示（FRED／TradingView／Yahoo／EIA）、無公開資料灰卡、替代徽章，最小頁尾（完成 2026-10-18）
 - [x] DA-04 非 FRED 指標處理（A1 B1 C1）：`tools/fetch-data.mjs` 新增 YAHOO／EIA／TRADINGVIEW 來源，新序列 `TV_USBCOI`、`TV_USNMBA`（替代）、`TV_BDI`、`YF_DXY`、`YF_GC`（替代）、`EIA_WCESTUS1`；消費者信心 `UMCSENT` 標替代、LME 列 `unavailable`；方案與一致性比對見 `doc/decisions/DA-04-非FRED指標方案.md`（完成 2026-10-18）
 - [x] DA-02 抓資料腳本 `tools/fetch-data.mjs`（Node 24、零套件）：從 FRED 公開 CSV 抓序列 → `data/series/<ID>.json`；含 NBER 衰退期 `USREC`；只留 1970-01-01 起，61 個序列，格式定案寫入 SU-02 決策檔（完成 2026-10-18）

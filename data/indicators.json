@@ -111,6 +111,7 @@
         { "id": "CES0500000003", "source": "FRED", "role": "compare", "substitute": false, "note": "同份報告的平均時薪" }
       ],
       "derived": ["mom_change", "yoy"],
+      "derived_series": ["DRV_PAYEMS_MOM", "DRV_PAYEMS_YOY"],
       "thresholds": [
         { "value": 0, "label": "YoY 0 線" }
       ],
@@ -133,6 +134,7 @@
         { "id": "JTSJOR", "source": "FRED", "role": "compare", "substitute": false, "note": "職缺率（Y 軸），JOLTS 自 2000-12" }
       ],
       "derived": ["beveridge"],
+      "derived_series": ["DRV_BEVERIDGE"],
       "thresholds": [],
       "rule": "以失業率對職缺率作散佈圖；曲線整體往外移，表示同樣職缺下失業較多，勞動市場媒合效率變差。",
       "pages": "K 27–32",
@@ -154,6 +156,7 @@
         { "id": "UNRATE", "source": "FRED", "role": "component", "substitute": false, "note": "可由失業率自算" }
       ],
       "derived": ["sahm"],
+      "derived_series": ["DRV_SAHM"],
       "thresholds": [
         { "value": 0.5, "label": "衰退訊號 0.5" }
       ],
@@ -297,7 +300,8 @@
         { "id": "GFDEBTN", "source": "FRED", "role": "compare", "substitute": false, "note": "聯邦總債務（季）" },
         { "id": "GFDEGDQ188S", "source": "FRED", "role": "compare", "substitute": false, "note": "債務占 GDP（季）" }
       ],
-      "derived": null,
+      "derived": ["ratio_gdp"],
+      "derived_series": ["DRV_DEFICIT_GDP"],
       "thresholds": [
         { "value": -3, "label": "赤字占 GDP 3%（FYFSGDA188S = −3）" }
       ],
@@ -551,6 +555,7 @@
         { "id": "CPIAUCNS", "source": "FRED", "role": "compare", "substitute": false, "note": "未季調，講義圖用" }
       ],
       "derived": ["qma", "yma", "yoy"],
+      "derived_series": ["DRV_CPI_YOY", "DRV_CPICORE_YOY"],
       "thresholds": [],
       "rule": "以固定籃子（Laspeyres）計算的物價水準，判讀以年增率為主，並對照核心 CPI 看通膨是否擴散。",
       "pages": "K 132–156",
@@ -571,6 +576,7 @@
         { "id": "PPIACO", "source": "FRED", "role": "compare", "substitute": false, "note": "全商品，講義圖用" }
       ],
       "derived": ["qma", "yma", "yoy"],
+      "derived_series": ["DRV_PPI_YOY", "DRV_PPIACO_YOY"],
       "thresholds": [],
       "rule": "生產端價格會往下游傳導；看去除食品與能源後的核心趨勢較不受短期波動干擾。",
       "pages": "K 157–177",
@@ -591,6 +597,7 @@
         { "id": "PCEPILFE", "source": "FRED", "role": "compare", "substitute": false, "note": "核心" }
       ],
       "derived": ["yoy"],
+      "derived_series": ["DRV_PCE_YOY", "DRV_PCECORE_YOY"],
       "thresholds": [],
       "rule": "Fed 2% 通膨目標所採用的物價指標，判讀以核心 PCE 年增率為主。",
       "pages": "K 178–182",
@@ -613,6 +620,7 @@
         { "id": "BAA10YM", "source": "FRED", "role": "compare", "substitute": false, "note": "Baa 減 10 年公債（月），講義圖用" }
       ],
       "derived": ["spread:DBAA-DAAA"],
+      "derived_series": ["DRV_BBB_AAA"],
       "thresholds": [],
       "rule": "低評等與高評等公司債的利差擴大，代表市場要求更高的違約風險補償，常出現在景氣放緩之前。",
       "pages": "K 183–185",

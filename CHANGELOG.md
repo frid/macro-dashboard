@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.6.0 — 2026-10-18
+- DA-05 衍生指標計算：新增 `tools/derive-data.mjs`（Node 24、零套件、原子寫入、輸入缺檔不覆蓋舊檔），由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/<ID>.json`：NFP 月增減與年增率、由 UNRATE 自算 Sahm Rule（附與 SAHMREALTIME 差異統計）、CPI／核心 CPI／PCE／核心 PCE／PPI（PPIFIS、PPIACO）年增率、BBB−AAA 利差（DBAA−DAAA）、赤字占 GDP（MTSDS133FMS 近 12 月合計 ÷ 名目 GDP，附與 FYFSGDA188S 對照）、Beveridge 曲線資料對；`indicators.json` 新增 `derived_series`、預算赤字補 `ratio_gdp`；SU-02 決策檔補衍生檔格式與執行順序（fetch → derive），README 同步
+
 ## 0.5.0 — 2026-10-18
 - UI-01 新增 Dashboard 主頁 `index.html`：六大分類分區與 32 張指標卡片（最新值、較前期變動、迷你走勢、L／C／G 標籤、資料截至日），暫行顯示規則（NFP 月增減、物價與 M2 年增率、利差），配合 DA-04 依序列來源標示 FRED／TradingView／Yahoo Finance／EIA，無公開資料灰卡與替代徽章，頁尾版號
 
