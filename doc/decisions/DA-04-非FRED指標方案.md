@@ -1,6 +1,6 @@
-# DA-04 非 FRED 指標方案（草案，待確認）
+# DA-04 非 FRED 指標方案
 
-- 狀態：**草案**——等使用者確認「要你決定的點」A、B、C 後才動工
+- 狀態：**已確認**（2026-10-18）——使用者選 A1、B1、C1
 - 日期：2026-10-18（同日補 TradingView 實測與替代指標一致性比對）
 - 範圍：`data/indicators.json` 中 `status: "pending"` 的 7 個指標，加上已用替代序列的美元指數，共 8 個
 - 相關：`doc/reference/指標清單.md`（狀態／替代欄）、`doc/decisions/SU-02-技術選型.md`（資料格式）
@@ -33,7 +33,7 @@ TradingView 實測代碼（未登入，`unauthorized_user_token`）：
 
 - ISM 服務業「總指數」（Services PMI）在 TradingView 搜不到（試過 `USNMPMI`、`USNMI`、`USSPMI`、`USSERPMI` 皆 invalid）；只有細項（商業活動 `USNMBA`、新訂單 `USNMNO`、就業 `USNMEMP`、價格 `USNMPR`），沒有供應商交貨。`USNMBA` 是 2008 年以前 ISM 服務業的主指標。
 - **`USCCI` 不是 Conference Board CCI**：頁面中繼資料 `source2` 為 University of Michigan；與 FRED `UMCSENT` 重疊 675 個月中 664 個月（98.4%）數值相同；起始 1952 年（Conference Board 1967 年才開始）。TradingView 也搜不到 Conference Board 版本。→ 不採用（與 `UMCSENT` 重複）。
-- **TradingView 日線日期比實際交易日早一天**（時間戳記是前一日 UTC）：對齊前黃金期貨／現貨日報酬相關 0.19，日期加一天後 0.90。實作必須加一天。
+- **TradingView 日線日期可能早一天**：`OANDA:XAUUSD` 交易時段從前一晚 17:00 NY 起算，時間戳記落在前一日 21:00–22:00 UTC；對齊前黃金期貨／現貨日報酬相關 0.19，加一天後 0.90。`INDEX:BDI` 則是當日 00:00 UTC，不需調整（實作時 worker 實測確認）。
 - LME 金屬庫存：TradingView 只有 LME 期貨價格、沒有庫存；仍無免費來源。
 - 尚未測：從 GitHub Actions（雲端 IP）連 TradingView 會不會被擋。
 
@@ -103,7 +103,7 @@ TradingView 實測代碼（未登入，`unauthorized_user_token`）：
 ## 6. 確認後的實作步驟
 
 1. `tools/fetch-data.mjs`：依 `source` 分派 FRED／YAHOO／EIA／TRADINGVIEW，新增 Yahoo JSON、EIA HTML 表格解析，以及 TradingView WebSocket 抓取（Node 24 內建 `WebSocket`，不加套件；月線 `1M`、日線 `1D`，取收盤值）。
-   - **TradingView 日線日期 +1 天**（時間戳記為前一日 UTC）；月線取年月、日固定為 01。
+   - **TradingView 日線**：時間戳記在 UTC 12:00 以後才 +1 天，否則取 UTC 日期（BDI 不調整、跨夜開盤的商品調整）；月線取年月、日固定為 01。
    - Yahoo 日線不用 `range=max`（會降採樣）。
 2. `data/indicators.json`：依第 3 節更新 8 個指標（消費者信心 `UMCSENT` 改標 `substitute: true`）。
 3. 執行腳本產生新序列檔。

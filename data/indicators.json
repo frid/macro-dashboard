@@ -45,7 +45,7 @@
       "frequency": "monthly",
       "release": "密大：每月第二個週五；CCI：每月最後一個週二",
       "series": [
-        { "id": "UMCSENT", "source": "FRED", "role": "main", "substitute": false, "note": "密西根大學消費者信心；CCI 不在 FRED，待 DA-04" }
+        { "id": "UMCSENT", "source": "FRED", "role": "main", "substitute": true, "note": "替代：密大消費者信心，非 Conference Board CCI" }
       ],
       "derived": ["yoy"],
       "thresholds": [
@@ -53,8 +53,8 @@
       ],
       "rule": "數字波動大，單月起落意義有限，要看一段時間的趨勢方向。",
       "pages": "K 11–15",
-      "status": "ok",
-      "external": { "name": "Bloomberg CONCCONF（Conference Board CCI）", "note": "待 DA-04" }
+      "status": "substitute",
+      "external": { "name": "Bloomberg CONCCONF（Conference Board CCI）", "note": "無免費來源；TradingView USCCI 實為密大，不採用" }
     },
     {
       "id": "underemployment",
@@ -232,15 +232,17 @@
       "timing_note": null,
       "frequency": "monthly",
       "release": "每月第一個營業日 10:00 ET",
-      "series": [],
+      "series": [
+        { "id": "TV_USBCOI", "source": "TRADINGVIEW", "tvSymbol": "ECONOMICS:USBCOI", "tvInterval": "1M", "role": "main", "substitute": false, "note": "ISM 原序列，經 TradingView" }
+      ],
       "derived": null,
       "thresholds": [
         { "value": 50, "label": "擴張／收縮 50" }
       ],
       "rule": "高於 50 代表製造業擴張，低於 50 代表收縮。",
       "pages": "K 51–55",
-      "status": "pending",
-      "external": { "name": "Bloomberg NAPMPMI Index", "note": "不在 FRED，待 DA-04" }
+      "status": "ok",
+      "external": { "name": "Bloomberg NAPMPMI Index", "note": "不在 FRED，改由 TradingView ECONOMICS:USBCOI 取得" }
     },
     {
       "id": "ism-services",
@@ -251,15 +253,17 @@
       "timing_note": null,
       "frequency": "monthly",
       "release": "每月第三個營業日",
-      "series": [],
+      "series": [
+        { "id": "TV_USNMBA", "source": "TRADINGVIEW", "tvSymbol": "ECONOMICS:USNMBA", "tvInterval": "1M", "role": "main", "substitute": true, "note": "替代：ISM 服務業商業活動細項，非綜合 PMI；平均高於綜合 PMI 約 2 點，跌破 50 的次數較少" }
+      ],
       "derived": null,
       "thresholds": [
         { "value": 50, "label": "擴張／收縮 50" }
       ],
       "rule": "判讀方式與製造業 PMI 相同（50 為分界）；服務業約占 GDP 七成，對整體景氣代表性高。",
       "pages": "K 56–59",
-      "status": "pending",
-      "external": { "name": "Bloomberg NAPMNMI Index", "note": "不在 FRED，待 DA-04" }
+      "status": "substitute",
+      "external": { "name": "Bloomberg NAPMNMI Index", "note": "綜合 PMI 無免費來源，改用商業活動細項替代" }
     },
     {
       "id": "lme-inventories",
@@ -275,8 +279,8 @@
       "thresholds": [],
       "rule": "庫存與金屬價格通常反向變動；利率極低時持有庫存成本低，關係會被扭曲。",
       "pages": "K 60–65",
-      "status": "pending",
-      "external": { "name": "Bloomberg LSAH／LSNI（LME 鋁／鎳庫存）", "note": "不在 FRED，待 DA-04" }
+      "status": "unavailable",
+      "external": { "name": "Bloomberg LSAH／LSNI（LME 鋁／鎳庫存）", "note": "無免費資料來源" }
     },
     {
       "id": "budget-deficit",
@@ -339,13 +343,15 @@
       "timing_note": null,
       "frequency": "daily",
       "release": "每營業日",
-      "series": [],
+      "series": [
+        { "id": "TV_BDI", "source": "TRADINGVIEW", "tvSymbol": "INDEX:BDI", "tvInterval": "1D", "role": "main", "substitute": false, "note": "原序列，經 TradingView" }
+      ],
       "derived": null,
       "thresholds": [],
       "rule": "反映乾散貨船即期租船價格，可看出全球原物料運輸需求；但新船大量下水也會壓低指數。",
       "pages": "K 94–98",
-      "status": "pending",
-      "external": { "name": "Bloomberg BDIY", "note": "不在 FRED，待 DA-04" }
+      "status": "ok",
+      "external": { "name": "Bloomberg BDIY", "note": "不在 FRED，改由 TradingView INDEX:BDI 取得" }
     },
     {
       "id": "dollar-index",
@@ -357,14 +363,15 @@
       "frequency": "daily",
       "release": "每營業日",
       "series": [
-        { "id": "DTWEXBGS", "source": "FRED", "role": "main", "substitute": true, "note": "替代：Fed 廣義美元指數，非 ICE DXY" }
+        { "id": "YF_DXY", "source": "YAHOO", "yahooSymbol": "DX-Y.NYB", "role": "main", "substitute": false, "note": "ICE 美元指數（DXY）" },
+        { "id": "DTWEXBGS", "source": "FRED", "role": "compare", "substitute": false, "note": "Fed 廣義美元，非 DXY" }
       ],
       "derived": null,
       "thresholds": [],
       "rule": "衡量美元對一籃子貨幣的強弱；講義所用的 ICE DXY 中歐元權重約 57.6%。",
       "pages": "K 99–102",
-      "status": "substitute",
-      "external": { "name": "ICE DXY（Yahoo）", "note": "不在 FRED，畫面改用替代序列" }
+      "status": "ok",
+      "external": { "name": "ICE DXY（Yahoo）", "note": "不在 FRED，改由 Yahoo DX-Y.NYB 取得" }
     },
     {
       "id": "oil-inventories",
@@ -375,13 +382,15 @@
       "timing_note": null,
       "frequency": "weekly",
       "release": "每週三（EIA）",
-      "series": [],
+      "series": [
+        { "id": "EIA_WCESTUS1", "source": "EIA", "eiaSeries": "WCESTUS1", "role": "main", "substitute": false, "note": "不含 SPR 的商業原油庫存（千桶），EIA 官網" }
+      ],
       "derived": null,
       "thresholds": [],
       "rule": "看不含戰略儲備（SPR）的商業原油庫存變化，判斷供需鬆緊。",
       "pages": "K 103–106",
-      "status": "pending",
-      "external": { "name": "Bloomberg DOESCRUD", "note": "FRED WCESTUS1 抓不到，改走 EIA API，待 DA-04" }
+      "status": "ok",
+      "external": { "name": "Bloomberg DOESCRUD", "note": "FRED WCESTUS1 抓不到，改由 EIA 官網歷史資料頁取得" }
     },
     {
       "id": "fed-funds-rate",
@@ -517,13 +526,15 @@
       "timing_note": null,
       "frequency": "daily",
       "release": "每營業日",
-      "series": [],
+      "series": [
+        { "id": "YF_GC", "source": "YAHOO", "yahooSymbol": "GC=F", "role": "main", "substitute": true, "note": "替代：COMEX 期貨，非 LBMA 現貨" }
+      ],
       "derived": ["qma", "yma"],
       "thresholds": [],
       "rule": "金價是市場避險情緒的量尺；不安升高時資金傾向流入黃金。",
       "pages": "K 130–131",
-      "status": "pending",
-      "external": { "name": "Bloomberg XAUUSD", "note": "LBMA 金價已自 FRED 下架，待 DA-04" }
+      "status": "substitute",
+      "external": { "name": "Bloomberg XAUUSD", "note": "LBMA 金價已自 FRED 下架，改用 COMEX 黃金期貨替代" }
     },
     {
       "id": "cpi",

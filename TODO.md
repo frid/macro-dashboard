@@ -9,13 +9,13 @@
 
 # 資料
 - [ ] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
-- [ ] DA-04 非 FRED 指標處理：ISM 製造業／服務業 PMI、Conference Board CCI、BDI、ICE 美元指數、LME 庫存、黃金、EIA 原油庫存
-  - 要你決定：用替代序列（見指標清單「替代」欄）、手動維護 CSV，或先不做
+  - DA-04 起含 TradingView WebSocket 來源：要實測雲端 IP 能否連線；不行就在 Actions 跳過該來源、保留舊檔
 - [ ] DA-05 衍生指標計算：NFP 月增減、Sahm Rule（自算對照 `SAHMREALTIME`）、CPI／PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 曲線資料對
 - [ ] DA-06 台灣指標是否納入（國發會景氣對策信號、台灣 PMI 等）
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
 - [ ] DA-07 G 區債務圖組：抓 `GFDEBTN`、`HMLBSHNO`、`MABSHNO`、`CMLBSHNO`、`SLOASM`、`REVOLSL`、`MVLOASM`、`GDP`，算 YoY 與占 GDP 比 [K 69–91]
-- [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日
+- [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日；TradingView 序列（`TV_*`）`last_updated` 為 null，一律用最後一筆觀測日
+- [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
 
 # 畫面
 - [ ] UI-01 版面骨架：頁首、六大分類分區（C／I／G／NX／MC／IFU）、指標卡片（名稱、最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料日期）
@@ -34,6 +34,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-04 非 FRED 指標處理（A1 B1 C1）：`tools/fetch-data.mjs` 新增 YAHOO／EIA／TRADINGVIEW 來源，新序列 `TV_USBCOI`、`TV_USNMBA`（替代）、`TV_BDI`、`YF_DXY`、`YF_GC`（替代）、`EIA_WCESTUS1`；消費者信心 `UMCSENT` 標替代、LME 列 `unavailable`；方案與一致性比對見 `doc/decisions/DA-04-非FRED指標方案.md`（完成 2026-10-18）
 - [x] DA-02 抓資料腳本 `tools/fetch-data.mjs`（Node 24、零套件）：從 FRED 公開 CSV 抓序列 → `data/series/<ID>.json`；含 NBER 衰退期 `USREC`；只留 1970-01-01 起，61 個序列，格式定案寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] SU-04 建立 `dev` 分支流程：任務 worktree 從 `dev` 開出、`task-release` 收尾合併進 `dev`、說「release」才用新的 `project-release` skill 把 `dev` 合併到 `main`；CLAUDE.md、task-next、task-release、worker agents 同步（完成 2026-10-18）
 - [x] DA-01 指標目錄 `data/indicators.json`：32 個指標（C 7／I 6／G 2／NX 3／MC 6／IFU 8）＋NBER 衰退期 `USREC`，格式定案寫入 `doc/decisions/SU-02-技術選型.md`（完成 2026-10-18）
