@@ -8,8 +8,6 @@
 # 專案設定
 
 # 資料
-- [~] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
-  - DA-04 起含 TradingView WebSocket 來源：要實測雲端 IP 能否連線；不行就在 Actions 跳過該來源、保留舊檔
 - [ ] DA-06 台灣指標是否納入（國發會景氣對策信號、台灣 PMI 等）
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
 - [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日；TradingView 序列（`TV_*`）`last_updated` 為 null，一律用最後一筆觀測日
@@ -34,6 +32,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-03 GitHub Actions 每日排程 `.github/workflows/update-data.yml`：台灣 06:30 跑 fetch → derive，bot 把 `data/` commit 到 `main` 再 `--no-ff` 合回 `dev`（CLAUDE.md 加例外條款）；fetch／derive 改成數據沒變不重寫檔（不只因 `fetched_at` 變動 commit）；雲端實測 TradingView WebSocket 可連，69 序列＋FEDWATCH FAIL 0；workflow 要 release 到 `main` 後才依排程生效（完成 2026-10-18）
 - [x] UI-06 頁尾：分開顯示「網站版本／改版日」與「資料抓取日」（讀各序列 `fetched_at` 最大值與 `fedwatch.json` 的 `generated_at`）；版號改讀 `VERSION`、讀不到沿用寫死值（資料來源與講義出處聲明已由 UI-09 完成）（完成 2026-10-18）
 - [x] UI-16 回到最上層按鈕：捲動超過一個視窗高度時右下角浮出圓形 ↑ 按鈕（手機 16px 邊距），點擊平滑捲回頁首，`prefers-reduced-motion` 時直接跳轉（完成 2026-10-18）
 - [x] DA-11 FedWatch 利率機率資料：`tools/fetch-data.mjs` 新增 `FEDWATCH`，解析 federalreserve.gov FOMC 日程、抓 Yahoo ZQ 各月合約，依 CME FedWatch 方法自算最近一場會議的目標區間機率（Now／1D／1W／1M）寫入 `data/fedwatch.json`（替代，2026-10-28 會議 84.5／15.5 與 CME 一致）；`fed-funds-rate` 的 `external` 加 CME 連結 `url`；畫面另開 UI-17（完成 2026-10-18）
