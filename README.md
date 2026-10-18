@@ -30,6 +30,10 @@
 
 純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，部署於 GitHub Pages（`main` 分支根目錄）。圖表庫為 Apache ECharts 6.1.0（CDN 載入），選型決策見 [doc/decisions/SU-02-技術選型.md](doc/decisions/SU-02-技術選型.md)。
 
+## 更新資料
+
+本機更新全部序列：`node tools/fetch-data.mjs`（需 Node 24；後面加序列代碼可只更新指定的，如 `node tools/fetch-data.mjs DGS10`）。
+
 ## 聲明
 
 指標分類與判讀觀念來自郭維裕教授課程講義；講義本身不隨本專案公開。本工具僅供學術與教學用途，不構成投資建議。
