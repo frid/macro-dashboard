@@ -336,7 +336,7 @@
       "series": [
         { "id": "GFDEBTN", "source": "FRED", "role": "main", "substitute": false, "note": "聯邦總債務" },
         { "id": "HMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "住宅房貸" },
-        { "id": "MABSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "總房貸" },
+        { "id": "MABSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "總房貸（家庭持有資產面，非負債；FRED 定義為資產）" },
         { "id": "CMLBSHNO", "source": "FRED", "role": "compare", "substitute": false, "note": "商業房貸" },
         { "id": "SLOASM", "source": "FRED", "role": "compare", "substitute": false, "note": "學生貸款" },
         { "id": "REVOLSL", "source": "FRED", "role": "compare", "substitute": false, "note": "循環信用（月）" },
@@ -344,6 +344,29 @@
         { "id": "GDP", "source": "FRED", "role": "component", "substitute": false, "note": "占 GDP 比的分母" }
       ],
       "derived": ["yoy", "ratio_gdp"],
+      "derived_series": [
+        "DRV_GFDEBTN_YOY",
+        "DRV_GFDEBTN_GDP",
+        "DRV_GFDEBTN_GDP_YOY",
+        "DRV_HMLBSHNO_YOY",
+        "DRV_HMLBSHNO_GDP",
+        "DRV_HMLBSHNO_GDP_YOY",
+        "DRV_MABSHNO_YOY",
+        "DRV_MABSHNO_GDP",
+        "DRV_MABSHNO_GDP_YOY",
+        "DRV_CMLBSHNO_YOY",
+        "DRV_CMLBSHNO_GDP",
+        "DRV_CMLBSHNO_GDP_YOY",
+        "DRV_SLOASM_YOY",
+        "DRV_SLOASM_GDP",
+        "DRV_SLOASM_GDP_YOY",
+        "DRV_REVOLSL_YOY",
+        "DRV_REVOLSL_GDP",
+        "DRV_REVOLSL_GDP_YOY",
+        "DRV_MVLOASM_YOY",
+        "DRV_MVLOASM_GDP",
+        "DRV_MVLOASM_GDP_YOY"
+      ],
       "thresholds": [
         { "value": 3, "label": "債務 YoY 3%" }
       ],

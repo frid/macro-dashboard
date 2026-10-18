@@ -2,8 +2,11 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
-## 0.8.1 — 2026-10-18
+## 0.9.1 — 2026-10-18
 - DC-01 README 補齊：資料來源依 FRED／Yahoo（非官方）／EIA／TradingView（非官方）／衍生序列列出序列代碼、替代序列與無公開資料指標、各來源條款連結；更新資料步驟（Node 24、先 fetch 再 derive、失敗不覆蓋舊檔）、本機預覽（HTTP server）、專案結構；TODO 新增 DA-11（FED Watch 來源）、UI-15（指標細項說明內容／來源／判斷標準）
+
+## 0.9.0 — 2026-10-18
+- DA-07 G 區債務圖組衍生序列：`tools/derive-data.mjs` 新增共用 `stockToGdp`（存量 ÷ 名目 GDP，季初對齊、GDP 未公布時用最新一季並記錄），為 GFDEBTN、HMLBSHNO、MABSHNO、CMLBSHNO、SLOASM、REVOLSL、MVLOASM 各產生 YoY、占 GDP 比、占 GDP 比 YoY 共 21 檔 `data/derived/DRV_*`（REVOLSL 占 GDP 比只取季末月）；GFDEBTN 占 GDP 比對照 GFDEGDQ188S（225 點最大差 0.56 pp）；`indicators.json` 美國債務與槓桿加 `derived_series`，MABSHNO 更正為家庭持有房貸資產 [K 69–91]
 
 ## 0.8.0 — 2026-10-18
 - UI-14 頁首改用弗里德里希〈霧海上的旅人〉（c. 1818，公有領域）裁切的 Banner `assets/wanderer-banner.jpg`，加暗色漸層與出處標註（Wikimedia Commons）；全站配色改為畫中色票（霧灰底、岩褐文字、灰藍主色／上升、赭色下降），寫死的顏色全收進 `:root` token，迷你走勢圖改讀 CSS 變數；對比皆 ≥ 4.5:1

@@ -108,6 +108,28 @@ const compare = (obs, ref) => {
   return obs.filter(([d]) => r.has(d)).map(([d, v]) => [v, r.get(d)]);
 };
 
+// 存量 ÷ GDP ×100（百分比）：債務是存量、GDP 已是年率，不再年化。
+// 單位：存量為百萬美元、GDP 為十億美元（季調年率，以季初日期標示）→ 存量 ÷ (GDP × 1000)。
+// 對齊：存量日期所屬季的 GDP；該季 GDP 尚未公布則用最新一季 GDP（fallback 記錄日期，歷史中間缺值不補）。
+// quarterEndOnly：月資料只取季末月（3／6／9／12 月）對該季 GDP（如 REVOLSL）。
+function stockToGdp(stock, gdpSeries, { quarterEndOnly = false, digits = 2 } = {}) {
+  const gdp = valueMap(gdpSeries);
+  const lastGdp = gdpSeries.observations.filter(([, v]) => v != null).at(-1);
+  const obs = [];
+  const fallback = [];
+  for (const [d, v] of valueMap(stock)) {
+    if (quarterEndOnly && Number(d.slice(5, 7)) % 3 !== 0) continue;
+    let g = gdp.get(quarterStart(d));
+    if (g == null) {
+      if (quarterStart(d) <= lastGdp[0]) continue;
+      g = lastGdp[1];
+      fallback.push(d);
+    }
+    obs.push([d, round((v / (g * 1000)) * 100, digits)]);
+  }
+  return { obs, gdp_fallback: fallback.length ? { gdp_date: lastGdp[0], from: fallback[0], to: fallback.at(-1) } : null };
+}
+
 // ---- 衍生序列定義 ----
 // inputs：計算用的序列 id（寫進檔案，last_updated／substitute 由此決定）；
 // checkInputs：只用於 check 比對的序列 id（不寫進 inputs；缺檔同樣視為失敗）；
@@ -120,6 +142,61 @@ const yoyDef = (id, input, title) => ({
   formula: `${input} 年增率（%）＝ 本月 ÷ 12 個月前同月 − 1，×100；以日期對齊，前一年同月缺值則略過；取 2 位小數。`,
   compute: (s) => ({ observations: yoy(s[input]) }),
 });
+
+// G 區債務圖組（DA-07）：每種債務 3 個衍生序列 —— 年增率、占 GDP 比、占 GDP 比的年增率（講義「水準／YoY／占 GDP／占 GDP 的 YoY」四張一組 [K 69–91]）
+// 單位：債務類序列皆為百萬美元，GDP 為十億美元。REVOLSL 為月資料，占 GDP 比只取季末月（3／6／9／12 月）。
+const DEBTS = [
+  { code: 'GFDEBTN', zh: '聯邦總債務', en: 'Federal Debt' },
+  { code: 'HMLBSHNO', zh: '住宅房貸', en: 'Home Mortgages' },
+  { code: 'MABSHNO', zh: '家庭持有房貸資產', en: 'Mortgage Assets Held by Households' },
+  { code: 'CMLBSHNO', zh: '商業房貸', en: 'Commercial Mortgages' },
+  { code: 'SLOASM', zh: '學生貸款', en: 'Student Loans' },
+  { code: 'REVOLSL', zh: '循環信用', en: 'Revolving Consumer Credit', quarterEndOnly: true },
+  { code: 'MVLOASM', zh: '汽車貸款', en: 'Motor Vehicle Loans' },
+];
+
+const debtDefs = ({ code, zh, en, quarterEndOnly }) => {
+  const name = `${zh} ${en}`;
+  const basis =
+    `${code}（百萬美元）÷（所屬季名目 GDP（十億美元，季調年率）× 1000）× 100；債務為存量、GDP 已是年率，不再年化；取 2 位小數。` +
+    '所屬季 GDP 尚未公布時，改用最新一季 GDP（check.gdp_fallback 記錄範圍）。' +
+    (quarterEndOnly ? '月資料只取季末月（3／6／9／12 月）對該季 GDP。' : '');
+  const ratio = (s, digits) => stockToGdp(s[code], s.GDP, { quarterEndOnly, digits });
+  const gdpDef = {
+    id: `DRV_${code}_GDP`,
+    title: `${name} 占 GDP ${en} % of GDP`,
+    units: '%',
+    inputs: [code, 'GDP'],
+    formula: basis,
+    compute: (s) => {
+      const r = ratio(s, 2);
+      return { observations: r.obs, check: { gdp_fallback: r.gdp_fallback } };
+    },
+  };
+  if (code === 'GFDEBTN') {
+    gdpDef.checkInputs = ['GFDEGDQ188S'];
+    gdpDef.formula += 'check 比對：與 FRED 的 GFDEGDQ188S（聯邦債務占 GDP，季）同日期值；GFDEGDQ188S 只用於 check 比對。';
+    const base = gdpDef.compute;
+    gdpDef.compute = (s) => {
+      const { observations, check } = base(s);
+      return { observations, check: { against: 'GFDEGDQ188S', ...diffStats(compare(observations, s.GFDEGDQ188S)), ...check } };
+    };
+  }
+  return [
+    yoyDef(`DRV_${code}_YOY`, code, `${name} 年增率 ${en} YoY`),
+    gdpDef,
+    {
+      id: `DRV_${code}_GDP_YOY`,
+      title: `${name} 占 GDP 比的年增率 ${en} % of GDP YoY`,
+      units: '%',
+      inputs: [code, 'GDP'],
+      formula:
+        `DRV_${code}_GDP（占 GDP 比，此處以 4 位小數計算）的年增率（%）＝ 本期 ÷ 12 個月前同期 − 1，×100；以日期對齊，缺值則略過；取 2 位小數。` +
+        `占 GDP 比算法：${basis}`,
+      compute: (s) => ({ observations: yoy({ observations: ratio(s, 4).obs }) }),
+    },
+  ];
+};
 
 const DEFS = [
   {
@@ -249,6 +326,7 @@ const DEFS = [
       return { observations: obs };
     },
   },
+  ...DEBTS.flatMap(debtDefs),
 ];
 
 // ---- 由日期間距推斷頻率（同 fetch-data.mjs）----
