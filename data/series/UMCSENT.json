@@ -4,7 +4,7 @@
   "source": "FRED",
   "frequency": "monthly",
   "units": null,
-  "substitute": false,
+  "substitute": true,
   "last_updated": "2026-09-25",
   "fetched_at": "2026-10-18",
   "observations": [

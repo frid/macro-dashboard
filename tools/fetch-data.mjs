@@ -1,9 +1,14 @@
 #!/usr/bin/env node
-// 抓 FRED 公開 CSV → data/series/<ID>.json（DA-02）
+// 抓各來源資料 → data/series/<ID>.json（DA-02 FRED；DA-04 加 Yahoo／EIA／TradingView）
 // 用法：
-//   node tools/fetch-data.mjs                 抓 indicators.json 內所有 FRED 序列＋USREC
-//   node tools/fetch-data.mjs DGS10 USREC     只抓指定序列
-// Node 24 內建 fetch，零套件。失敗的序列不會建立或覆蓋檔案，結束碼為 1。
+//   node tools/fetch-data.mjs                     抓 indicators.json 內所有序列＋USREC
+//   node tools/fetch-data.mjs DGS10 TV_BDI        只抓指定序列
+// 依 series[].source 分派：
+//   FRED         公開 CSV（fredgraph.csv）
+//   YAHOO        chart API JSON（yahooSymbol，日線）
+//   EIA          官網歷史資料頁 HTML 表格（eiaSeries，週資料）
+//   TRADINGVIEW  圖表 WebSocket（tvSymbol、tvInterval，非官方協定；整批一條連線，逾時 30 秒）
+// Node 24 內建 fetch／WebSocket，零套件。失敗的序列不會建立或覆蓋檔案，結束碼為 1。
 
 import { readFile, writeFile, rename, mkdir, unlink } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -15,6 +20,9 @@ const OUT_DIR = path.join(ROOT, 'data', 'series');
 const START_DATE = '1970-01-01';
 const MAX_ATTEMPTS = 3;
 const DELAY_MS = 400; // 序列之間的間隔，避免被限流
+const TV_TIMEOUT_MS = 30000;
+// Yahoo／EIA 擋沒有 User-Agent 的請求，送一般瀏覽器字串
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36';
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -22,16 +30,25 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // title 規則：優先用 role === 'main' 的引用，標題為「中文名 英文名」；
 // 若序列只被 compare／component 引用，標題在後面加上 note（沒有 note 就不加）。
 function collectSeries(catalog) {
-  const map = new Map(); // id -> { id, title, substitute, isMain }
+  const map = new Map(); // id -> { id, source, title, substitute, isMain, yahooSymbol?, eiaSeries?, tvSymbol?, tvInterval? }
   for (const ind of catalog.indicators) {
     for (const s of ind.series ?? []) {
-      if (s.source !== 'FRED') continue;
       const isMain = s.role === 'main';
       const base = `${ind.name_zh} ${ind.name_en}`;
       const title = isMain || !s.note ? base : `${base}（${s.note}）`;
       const prev = map.get(s.id);
       if (!prev) {
-        map.set(s.id, { id: s.id, title, substitute: !!s.substitute, isMain });
+        map.set(s.id, {
+          id: s.id,
+          source: s.source,
+          title,
+          substitute: !!s.substitute,
+          isMain,
+          yahooSymbol: s.yahooSymbol,
+          eiaSeries: s.eiaSeries,
+          tvSymbol: s.tvSymbol,
+          tvInterval: s.tvInterval,
+        });
       } else {
         prev.substitute = prev.substitute || !!s.substitute;
         if (isMain && !prev.isMain) {
@@ -42,17 +59,16 @@ function collectSeries(catalog) {
     }
   }
   const rec = catalog.recession?.series;
-  if (rec) map.set(rec, { id: rec, title: 'NBER 衰退期', substitute: false, isMain: true });
+  if (rec) map.set(rec, { id: rec, source: 'FRED', title: 'NBER 衰退期', substitute: false, isMain: true });
   return map;
 }
 
 // ---- 下載（含重試）----
-async function download(id) {
-  const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(id)}&cosd=${START_DATE}`;
+async function download(url, headers = {}) {
   let lastErr;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(30000) });
+      const res = await fetch(url, { headers, signal: AbortSignal.timeout(30000) });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       return { text: await res.text(), lastModified: res.headers.get('last-modified') };
     } catch (e) {
@@ -63,7 +79,19 @@ async function download(id) {
   throw new Error(`下載失敗（重試 ${MAX_ATTEMPTS} 次）：${lastErr.message}`);
 }
 
-// ---- 解析 CSV ----
+// 共用：只保留 START_DATE 起、依日期排序、同日去重（後者覆蓋）
+function finalize(obs) {
+  const m = new Map();
+  for (const [d, v] of obs) if (d >= START_DATE) m.set(d, v);
+  const out = [...m.entries()].sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+  if (out.length === 0) throw new Error(`沒有 ${START_DATE} 之後的觀測值`);
+  return out;
+}
+
+// Yahoo 數值為 float32（約 7 位有效數字），取 7 位有效數字去掉浮點雜訊
+const toFloat32Precision = (x) => Number(x.toPrecision(7));
+
+// ---- FRED：公開 CSV ----
 function parseCsv(id, text) {
   const lines = text.replace(/^﻿/, '').split(/\r?\n/).filter((l) => l.trim() !== '');
   if (lines.length === 0) throw new Error('回應為空');
@@ -89,6 +117,226 @@ function parseCsv(id, text) {
   }
   if (obs.length === 0) throw new Error(`沒有 ${START_DATE} 之後的觀測值`);
   return obs;
+}
+
+async function fetchFred(meta) {
+  const url = `https://fred.stlouisfed.org/graph/fredgraph.csv?id=${encodeURIComponent(meta.id)}&cosd=${START_DATE}`;
+  const { text, lastModified } = await download(url);
+  return { observations: parseCsv(meta.id, text), lastUpdated: toDate(lastModified) };
+}
+
+// ---- YAHOO：chart API（日線）----
+// 不用 range=max（會降採樣成月／週線），改用 period1=0～現在＋interval=1d 取完整日線。
+// 日期以交易所時區換算；收盤為 null 的列（非交易日）略過；當日盤中未收盤的那一根也略過。
+function localDate(sec, timeZone) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(new Date(sec * 1000));
+}
+
+async function fetchYahoo(meta) {
+  const sym = meta.yahooSymbol;
+  if (!sym) throw new Error('目錄缺 yahooSymbol');
+  const now = Math.floor(Date.now() / 1000);
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}?period1=0&period2=${now}&interval=1d&includePrePost=false`;
+  const { text } = await download(url, { 'User-Agent': UA });
+  let j;
+  try {
+    j = JSON.parse(text);
+  } catch {
+    throw new Error(`Yahoo 回應不是 JSON：${text.slice(0, 80)}`);
+  }
+  const r = j?.chart?.result?.[0];
+  if (!r) throw new Error(`Yahoo 無資料：${JSON.stringify(j?.chart?.error ?? j).slice(0, 120)}`);
+  const m = r.meta ?? {};
+  if (m.dataGranularity && m.dataGranularity !== '1d') throw new Error(`Yahoo 回傳頻率為 ${m.dataGranularity}，不是日線`);
+  const tz = m.exchangeTimezoneName || 'America/New_York';
+  const t = r.timestamp ?? [];
+  const close = r.indicators?.quote?.[0]?.close ?? [];
+  if (t.length === 0 || t.length !== close.length) throw new Error('Yahoo 時間與收盤筆數不符或為空');
+  const reg = m.currentTradingPeriod?.regular;
+  const openSession = reg && now < reg.end ? reg.start : Infinity;
+  const obs = [];
+  for (let i = 0; i < t.length; i++) {
+    const c = close[i];
+    if (c == null || !Number.isFinite(c)) continue;
+    if (t[i] >= openSession) continue; // 盤中，尚未收盤
+    obs.push([localDate(t[i], tz), toFloat32Precision(c)]);
+  }
+  const lastUpdated = m.regularMarketTime ? localDate(m.regularMarketTime, tz) : null;
+  return { observations: finalize(obs), lastUpdated };
+}
+
+// ---- EIA：歷史資料頁 HTML 表格（週資料）----
+// 每列 = 一個「年-月」（class B6），後接最多 5 組「週結束日 MM/DD（B5）＋數值（B3）」。
+const MONTHS = { Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6, Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12 };
+const cellText = (s) => s.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+
+function parseEia(html) {
+  const obs = [];
+  const rows = html.match(/<tr[\s>][\s\S]*?<\/tr>/gi) ?? [];
+  for (const row of rows) {
+    const ym = row.match(/class='B6'>([\s\S]*?)<\/td>/);
+    if (!ym) continue;
+    const label = cellText(ym[1]);
+    const mm = label.match(/^(\d{4})-([A-Z][a-z]{2})$/);
+    if (!mm || !MONTHS[mm[2]]) throw new Error(`EIA 年月欄格式錯誤：${label}`);
+    const year = Number(mm[1]);
+    const rowMonth = MONTHS[mm[2]];
+    const cells = [...row.matchAll(/class='(B5|B3)'>([\s\S]*?)<\/td>/g)].map((x) => [x[1], cellText(x[2])]);
+    for (let i = 0; i + 1 < cells.length; i += 2) {
+      const [k1, d] = cells[i];
+      const [k2, v] = cells[i + 1];
+      if (k1 !== 'B5' || k2 !== 'B3') throw new Error(`EIA ${label} 欄位順序不符`);
+      if (d === '') continue;
+      const dm = d.match(/^(\d{2})\/(\d{2})$/);
+      if (!dm) throw new Error(`EIA ${label} 日期格式錯誤：${d}`);
+      const mon = Number(dm[1]);
+      let y = year; // 跨年防呆（列為 12 月、日期為 1 月，或反之）
+      if (rowMonth === 12 && mon === 1) y++;
+      else if (rowMonth === 1 && mon === 12) y--;
+      const date = `${y}-${dm[1]}-${dm[2]}`;
+      const raw = v.replace(/,/g, '');
+      let value;
+      if (raw === '' || raw === '-' || raw === '--' || raw === 'NA' || raw === 'W') value = null;
+      else {
+        value = Number(raw);
+        if (!Number.isFinite(value)) throw new Error(`EIA ${date} 數值無法解析：${v}`);
+      }
+      obs.push([date, value]);
+    }
+  }
+  if (obs.length === 0) throw new Error('EIA 頁面找不到資料表');
+  return obs;
+}
+
+async function fetchEia(meta) {
+  const s = meta.eiaSeries;
+  if (!s) throw new Error('目錄缺 eiaSeries');
+  const url = `https://www.eia.gov/dnav/pet/hist/LeafHandler.ashx?n=PET&s=${encodeURIComponent(s)}&f=W`;
+  const { text } = await download(url, { 'User-Agent': UA });
+  const rel = text.match(/>\s*Release Date:\s*(\d{2})\/(\d{2})\/(\d{4})\s*</);
+  const lastUpdated = rel ? `${rel[3]}-${rel[1]}-${rel[2]}` : null;
+  return { observations: finalize(parseEia(text)), lastUpdated };
+}
+
+// ---- TRADINGVIEW：圖表 WebSocket（非官方協定）----
+// 封包格式 ~m~<長度>~m~<JSON>；收到 ~h~ 心跳要原樣回送。整批序列共用一條連線，每個序列一個 chart session。
+// 日期：月線取年月、日固定 01；日線若時間戳記在 UTC 12:00 之後（交易時段從前一晚開始，如外匯／金屬現貨），
+// 日期 +1 天，否則取 UTC 日期（如 INDEX:BDI 為 00:00 UTC，本來就是當日）。
+// 抓不到 last_updated，記 null。
+function tvDate(sec, interval) {
+  const d = new Date(sec * 1000);
+  if (/M$/.test(interval)) return `${d.toISOString().slice(0, 7)}-01`;
+  if (d.getUTCHours() >= 12) d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+function fetchTradingView(metas) {
+  return new Promise((resolve) => {
+    const results = new Map(); // id -> { observations } | { error }
+    const bars = metas.map(() => new Map()); // 時間戳記 -> 收盤
+    const done = metas.map(() => false);
+    let finished = false;
+    let ws;
+    const finish = (globalErr) => {
+      if (finished) return;
+      finished = true;
+      clearTimeout(timer);
+      try {
+        ws?.close();
+      } catch {}
+      metas.forEach((m, i) => {
+        if (results.has(m.id)) return;
+        if (!done[i]) results.set(m.id, { error: globalErr ?? 'TradingView 未完成' });
+      });
+      resolve(results);
+    };
+    const timer = setTimeout(() => finish(`TradingView 逾時（${TV_TIMEOUT_MS / 1000} 秒）`), TV_TIMEOUT_MS);
+    const settle = (i, err) => {
+      if (done[i]) return;
+      done[i] = true;
+      const m = metas[i];
+      if (err) results.set(m.id, { error: err });
+      else {
+        try {
+          const obs = [...bars[i].entries()]
+            .sort((a, b) => a[0] - b[0])
+            .map(([t, c]) => [tvDate(t, m.tvInterval), c]);
+          results.set(m.id, { observations: finalize(obs) });
+        } catch (e) {
+          results.set(m.id, { error: e.message });
+        }
+      }
+      if (done.every(Boolean)) finish();
+    };
+
+    for (const [i, m] of metas.entries()) {
+      if (!m.tvSymbol || !m.tvInterval) settle(i, '目錄缺 tvSymbol 或 tvInterval');
+    }
+    if (finished) return;
+
+    try {
+      ws = new WebSocket('wss://data.tradingview.com/socket.io/websocket?type=chart', {
+        headers: { Origin: 'https://www.tradingview.com', 'User-Agent': UA },
+      });
+    } catch (e) {
+      finish(`TradingView 連線失敗：${e.message}`);
+      return;
+    }
+    const pack = (s) => `~m~${s.length}~m~${s}`;
+    const send = (m, p) => ws.send(pack(JSON.stringify({ m, p })));
+    let started = false;
+
+    ws.onerror = (e) => finish(`TradingView 連線錯誤：${e?.message ?? e?.error?.message ?? 'unknown'}`);
+    ws.onclose = () => finish('TradingView 連線中斷');
+    ws.onmessage = (e) => {
+      for (const raw of String(e.data).split(/~m~\d+~m~/).filter(Boolean)) {
+        if (raw.startsWith('~h~')) {
+          ws.send(pack(raw)); // 心跳原樣回送
+          continue;
+        }
+        let j;
+        try {
+          j = JSON.parse(raw);
+        } catch {
+          continue;
+        }
+        if (!started && j.session_id) {
+          started = true;
+          send('set_auth_token', ['unauthorized_user_token']);
+          metas.forEach((m, i) => {
+            if (done[i]) return;
+            const cs = `cs_${i}`;
+            send('chart_create_session', [cs, '']);
+            send('resolve_symbol', [cs, 'sym', '=' + JSON.stringify({ symbol: m.tvSymbol })]);
+            send('create_series', [cs, 's1', 's1', 'sym', m.tvInterval, 20000, '']);
+          });
+          continue;
+        }
+        if (j.m === 'critical_error' || j.m === 'protocol_error') {
+          finish(`TradingView ${j.m}：${JSON.stringify(j.p).slice(0, 120)}`);
+          return;
+        }
+        const cs = j.p?.[0];
+        if (typeof cs !== 'string' || !cs.startsWith('cs_')) continue;
+        const i = Number(cs.slice(3));
+        if (!(i >= 0 && i < metas.length)) continue;
+        if (j.m === 'symbol_error') settle(i, `TradingView 代碼無效：${metas[i].tvSymbol}（${JSON.stringify(j.p.slice(1)).slice(0, 80)}）`);
+        else if (j.m === 'series_error') settle(i, `TradingView 序列錯誤：${JSON.stringify(j.p.slice(1)).slice(0, 80)}`);
+        else if (j.m === 'timescale_update' || j.m === 'du') {
+          const b = j.p[1]?.s1?.s;
+          if (Array.isArray(b)) {
+            for (const x of b) {
+              const [t, , , , c] = x.v ?? [];
+              if (Number.isFinite(t) && Number.isFinite(c)) bars[i].set(t, c);
+            }
+          }
+        } else if (j.m === 'series_completed') {
+          settle(i, bars[i].size === 0 ? 'TradingView 回傳 0 筆' : null);
+        }
+      }
+    };
+  });
 }
 
 // ---- 由日期間距推斷頻率（取間距中位數，天）----
@@ -142,32 +390,61 @@ async function main() {
 
   const ok = [];
   const failed = [];
-  for (let i = 0; i < ids.length; i++) {
-    const id = ids[i];
-    if (i > 0) await sleep(DELAY_MS);
+
+  const save = async (meta, observations, lastUpdated) => {
+    const out = {
+      id: meta.id,
+      title: meta.title,
+      source: meta.source,
+      frequency: inferFrequency(observations),
+      units: null,
+      substitute: meta.substitute,
+      last_updated: lastUpdated,
+      fetched_at: fetchedAt,
+      observations,
+    };
+    const content = serialize(out);
+    JSON.parse(content); // 寫檔前自我檢查
+    await writeAtomic(path.join(OUT_DIR, `${meta.id}.json`), content);
+    ok.push(meta.id);
+    const last = observations.at(-1);
+    console.log(`OK   ${meta.id}（${meta.source}，${observations.length} 筆，最新 ${last[0]} = ${last[1]}）`);
+  };
+  const fail = (id, reason) => {
+    failed.push({ id, reason });
+    console.error(`FAIL ${id}：${reason}`);
+  };
+
+  const metas = ids.map((id) => all.get(id) ?? { id, source: 'FRED', title: id, substitute: false });
+  const fetchers = { FRED: fetchFred, YAHOO: fetchYahoo, EIA: fetchEia };
+
+  // FRED／YAHOO／EIA：逐一抓
+  let n = 0;
+  for (const meta of metas) {
+    if (meta.source === 'TRADINGVIEW') continue;
+    if (n++ > 0) await sleep(DELAY_MS);
     try {
-      const meta = all.get(id) ?? { title: id, substitute: false };
-      const { text, lastModified } = await download(id);
-      const observations = parseCsv(id, text);
-      const out = {
-        id,
-        title: meta.title,
-        source: 'FRED',
-        frequency: inferFrequency(observations),
-        units: null,
-        substitute: meta.substitute,
-        last_updated: toDate(lastModified),
-        fetched_at: fetchedAt,
-        observations,
-      };
-      const content = serialize(out);
-      JSON.parse(content); // 寫檔前自我檢查
-      await writeAtomic(path.join(OUT_DIR, `${id}.json`), content);
-      ok.push(id);
-      console.log(`OK   ${id}（${observations.length} 筆）`);
+      const f = fetchers[meta.source];
+      if (!f) throw new Error(`未知的來源：${meta.source}`);
+      const { observations, lastUpdated } = await f(meta);
+      await save(meta, observations, lastUpdated);
     } catch (e) {
-      failed.push({ id, reason: e.message });
-      console.error(`FAIL ${id}：${e.message}`);
+      fail(meta.id, e.message);
+    }
+  }
+
+  // TRADINGVIEW：整批一條連線；失敗不影響上面已寫入的序列
+  const tv = metas.filter((m) => m.source === 'TRADINGVIEW');
+  if (tv.length) {
+    const results = await fetchTradingView(tv);
+    for (const meta of tv) {
+      const r = results.get(meta.id);
+      try {
+        if (!r || r.error) throw new Error(r?.error ?? 'TradingView 無結果');
+        await save(meta, r.observations, null);
+      } catch (e) {
+        fail(meta.id, e.message);
+      }
     }
   }
 

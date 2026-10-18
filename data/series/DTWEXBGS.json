@@ -1,10 +1,10 @@
 {
   "id": "DTWEXBGS",
-  "title": "美元指數 U.S. Dollar Index",
+  "title": "美元指數 U.S. Dollar Index（Fed 廣義美元，非 DXY）",
   "source": "FRED",
   "frequency": "daily",
   "units": null,
-  "substitute": true,
+  "substitute": false,
   "last_updated": "2026-10-13",
   "fetched_at": "2026-10-18",
   "observations": [
