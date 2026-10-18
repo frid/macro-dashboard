@@ -17,6 +17,7 @@
   --accent: #2b4a6f;
   --sub: #b45309;
   --sub-bg: #fef3c7;
+  --neu: #9aa5b1;
 }
 * { box-sizing: border-box; }
 body {
@@ -90,6 +91,39 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .spark { width: 100%; height: 48px; }
 .meta { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
 .errmsg { color: #c0392b; font-size: .85rem; word-break: break-all; }
+.sig-lead { margin: 0 0 6px; font-size: .9rem; }
+.sig-verdict { margin: 0 0 10px; font-weight: 600; }
+.sig-verdict.exp { color: var(--up); }
+.sig-verdict.con { color: var(--down); }
+.sig-wrap { overflow-x: auto; margin-bottom: 12px; }
+.sig-table { border-collapse: collapse; background: var(--card); font-size: .85rem; font-variant-numeric: tabular-nums; }
+.sig-table th, .sig-table td { border: 1px solid var(--border); padding: 4px 10px; text-align: center; }
+.sig-table th { background: #eef1f5; font-weight: 600; }
+.sig-table th.exp { color: var(--up); }
+.sig-table th.con { color: var(--down); }
+.sig-table tr.total td { font-weight: 700; }
+.sig-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.light {
+  display: block;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 5px solid var(--neu);
+  border-radius: 6px;
+  padding: 6px 8px;
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+.light:hover { border-color: var(--accent); }
+.light.exp { border-left-color: var(--up); }
+.light.con { border-left-color: var(--down); }
+.light.na { background: #eceef1; }
+.light .lhead { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.light .lname { font-weight: 600; font-size: .9rem; }
+.light .lstate { margin-left: auto; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.light.exp .lstate { color: var(--up); }
+.light.con .lstate { color: var(--down); }
+.light .lwhy { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; word-break: break-word; }
 .fatal { background: #fdecea; border: 1px solid #c0392b; color: #7b241c; padding: 16px; border-radius: 8px; margin: 16px 0; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
 </style>
@@ -103,7 +137,7 @@ footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-to
   </div>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.6.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.7.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 
 <script>
 'use strict';
@@ -186,6 +220,21 @@ function transform(mode, obsMain, obsB) {
   return obsMain;
 }
 
+// 讀序列 → 依 mode 轉換 → 取最後兩點；卡片與綜合訊號共用（讀取失敗會 throw）
+async function loadPoints(ids, mode) {
+  const loaded = await Promise.all(ids.map(loadSeries));
+  const obsMain = validObs(loaded[0]);
+  const obsB = loaded[1] ? validObs(loaded[1]) : null;
+  const pts = transform(mode, obsMain, obsB);
+  return {
+    loaded: loaded,
+    pts: pts,
+    last: pts.length ? pts[pts.length - 1] : null,
+    prev: pts.length > 1 ? pts[pts.length - 2] : null,
+    freq: loaded[0].frequency
+  };
+}
+
 function fmtDate(d, freq) {
   if (freq === 'monthly') return d.slice(0, 7);
   if (freq === 'quarterly') {
@@ -248,25 +297,19 @@ async function buildCard(ind) {
     return el('<div class="card error">' + headHtml(ind) +
       '<div class="errmsg">找不到主序列（indicators.json 此指標無 role=main）</div></div>');
   }
-  let loaded;
+  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
+  const mode = rule.mode;
+  let data;
   try {
-    loaded = await Promise.all(ids.map(loadSeries));
+    data = await loadPoints(ids, mode);
   } catch (e) {
     return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">' + esc(e.message) + '</div></div>');
   }
-
-  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
-  const mode = rule.mode;
-  const obsMain = validObs(loaded[0]);
-  const obsB = loaded[1] ? validObs(loaded[1]) : null;
-  const pts = transform(mode, obsMain, obsB);
+  const { loaded, pts, last, prev } = data;
   if (pts.length === 0) {
     return el('<div class="card error">' + headHtml(ind) + '<div class="errmsg">序列 ' + esc(ids.join('、')) + ' 無有效資料</div></div>');
   }
-
-  const last = pts[pts.length - 1];
-  const prev = pts.length > 1 ? pts[pts.length - 2] : null;
-  const freq = loaded[0].frequency || ind.frequency;
+  const freq = data.freq || ind.frequency;
 
   let changeHtml = '<span class="change flat">—</span>';
   if (prev) {
@@ -321,6 +364,124 @@ function drawSpark(card) {
   window.addEventListener('resize', () => chart.resize());
 }
 
+// ---- 綜合訊號（UI-03）：規則在 indicators.json 的 signal 欄位 ----
+const STATE_LABEL = { exp: '擴張', neu: '中性', con: '收縮', na: '不計' };
+
+// date 往前推 n 個月（日不變；只拿來做字串比較，不需是合法日期）
+function monthsBefore(date, n) {
+  let y = parseInt(date.slice(0, 4), 10);
+  let m = parseInt(date.slice(5, 7), 10) - n;
+  while (m < 1) { m += 12; y -= 1; }
+  return y + '-' + String(m).padStart(2, '0') + date.slice(7);
+}
+// pts 中日期 > cut 的平均值；沒有資料回 null
+function meanAfter(pts, cut) {
+  let sum = 0, n = 0;
+  for (const p of pts) if (p[0] > cut) { sum += p[1]; n++; }
+  return n ? sum / n : null;
+}
+
+// 回傳 { state: 'exp'|'neu'|'con'|'na', text }；不會 throw
+async function evalSignal(ind) {
+  const sg = ind.signal;
+  if (!sg) return { state: 'na', text: ind.status === 'unavailable' ? '無公開資料' : '不列入判斷' };
+  const ids = sg.minus ? [sg.series, sg.minus] : [sg.series];
+  const mode = sg.basis === 'yoy' ? 'yoy' : sg.minus ? 'spread' : 'raw';
+  let data;
+  try {
+    data = await loadPoints(ids, mode);
+  } catch (e) {
+    return { state: 'na', text: '資料讀取失敗：' + e.message };
+  }
+  const { pts, last } = data;
+  if (!last) return { state: 'na', text: '序列 ' + ids.join('、') + ' 無有效資料' };
+  const asOf = '（' + fmtDate(last[0], data.freq || ind.frequency) + '）';
+  const below = sg.expansionWhen === 'below';
+  // v 落在擴張那一側為 exp、另一側為 con；剛好等於門檻時用 atThreshold（預設中性）
+  const side = (v, t) => v === t ? (sg.atThreshold || 'neu') : ((v < t) === below ? 'exp' : 'con');
+  const sym = (v, t) => v > t ? '>' : v < t ? '<' : '=';
+  const f = v => fmtNum(v, mode);
+
+  if (sg.basis === 'raw' || sg.basis === 'yoy') {
+    const v = last[1];
+    const pre = sg.basis === 'yoy' ? 'YoY ' : '';
+    if (sg.neutralBand) {
+      const [lo, hi] = sg.neutralBand;
+      if (v >= lo && v <= hi) return { state: 'neu', text: lo + ' ≤ ' + pre + f(v) + ' ≤ ' + hi + asOf };
+      const t = v < lo ? lo : hi;
+      return { state: side(v, t), text: pre + f(v) + ' ' + sym(v, t) + ' ' + t + asOf };
+    }
+    const t = sg.threshold;
+    return { state: side(v, t), text: pre + f(v) + ' ' + sym(v, t) + ' ' + t + asOf };
+  }
+  if (sg.basis === 'trend') {
+    // 視窗以最新一筆的日期往回算，月／週／日資料都適用
+    const [sm, lm] = sg.window || [3, 12];
+    const longCut = monthsBefore(last[0], lm);
+    if (pts[0][0] > longCut) return { state: 'na', text: '資料不足 ' + lm + ' 個月' };
+    const s = meanAfter(pts, monthsBefore(last[0], sm));
+    const l = meanAfter(pts, longCut);
+    return { state: side(s, l), text: '近 ' + sm + ' 月均 ' + f(s) + ' ' + sym(s, l) + ' 近 ' + lm + ' 月均 ' + f(l) + asOf };
+  }
+  return { state: 'na', text: '未知的判斷方式 ' + sg.basis };
+}
+
+function isSubstituteSignal(ind) {
+  if (ind.status === 'substitute') return true;
+  const sg = ind.signal;
+  if (!sg) return false;
+  const ids = sg.minus ? [sg.series, sg.minus] : [sg.series];
+  return (ind.series || []).some(s => ids.includes(s.id) && s.substitute);
+}
+
+function summarySection() {
+  return el('<section class="cat" id="signal-summary"><h2>綜合訊號總覽<span class="en">Signal Summary</span></h2>' +
+    '<p class="sig-lead">單一指標容易誤判；越多指標指向同一方向，訊號越可信 [K 4]。下表依各指標的簡化規則（門檻、年增率或近 3 月對近 12 月均值）判斷目前偏擴張或偏收縮；通膨、利率等方向不單純的指標不計。點燈號可跳到該指標卡片。</p>' +
+    '<div class="sig-verdict">計算中…</div><div class="sig-wrap"></div><div class="sig-grid"></div></section>');
+}
+
+function fillSummary(sec, inds, sigs) {
+  const states = ['exp', 'neu', 'con', 'na'];
+  const rows = ['L', 'C', 'G'];
+  if (inds.some(i => !TIMING[i.timing])) rows.push('-');
+  const cnt = {};
+  for (const r of rows.concat('all')) cnt[r] = { exp: 0, neu: 0, con: 0, na: 0 };
+  inds.forEach((ind, k) => {
+    const r = TIMING[ind.timing] ? ind.timing : '-';
+    cnt[r][sigs[k].state]++;
+    cnt.all[sigs[k].state]++;
+  });
+
+  const head = '<tr><th>時序</th>' + states.map(s => '<th class="' + s + '">' + STATE_LABEL[s] + '</th>').join('') + '<th>小計</th></tr>';
+  const rowHtml = (r, label, cls) => {
+    const c = cnt[r];
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td>' +
+      states.map(s => '<td>' + c[s] + '</td>').join('') + '<td>' + (c.exp + c.neu + c.con + c.na) + '</td></tr>';
+  };
+  sec.querySelector('.sig-wrap').innerHTML = '<table class="sig-table">' + head +
+    rows.map(r => rowHtml(r, r === '-' ? '未標' : TIMING[r])).join('') + rowHtml('all', '合計', 'total') + '</table>';
+
+  const a = cnt.all;
+  const counted = a.exp + a.neu + a.con;
+  const dir = a.exp > a.con ? 'exp' : a.con > a.exp ? 'con' : 'neu';
+  const dirText = dir === 'exp' ? '目前多數指標偏擴張' : dir === 'con' ? '目前多數指標偏收縮' : '擴張與收縮指標數相同，方向不明';
+  const v = sec.querySelector('.sig-verdict');
+  v.className = 'sig-verdict ' + dir;
+  v.textContent = '列入判斷 ' + counted + ' 項：擴張 ' + a.exp + '、中性 ' + a.neu + '、收縮 ' + a.con + ' → ' + dirText + '（不計 ' + a.na + ' 項）';
+
+  const grid = sec.querySelector('.sig-grid');
+  inds.forEach((ind, k) => {
+    const sg = sigs[k];
+    const tag = ind.timing ? '<span class="tag">' + TIMING[ind.timing] + '</span>' : '';
+    const sub = isSubstituteSignal(ind) ? '<span class="badge-sub">替代</span>' : '';
+    const note = ind.signal && ind.signal.note ? ind.signal.note : '';
+    grid.appendChild(el('<a class="light ' + sg.state + '" href="#ind-' + esc(ind.id) + '" title="' + esc(note) + '">' +
+      '<div class="lhead"><span class="lname">' + esc(ind.name_zh) + '</span>' + tag + sub +
+      '<span class="lstate">' + STATE_LABEL[sg.state] + '</span></div>' +
+      '<div class="lwhy">' + esc(sg.text) + '</div></a>'));
+  });
+}
+
 async function main() {
   const app = document.getElementById('app');
   let cat;
@@ -335,6 +496,9 @@ async function main() {
   }
 
   app.innerHTML = '';
+  const summary = summarySection();
+  app.appendChild(summary);
+  const sigJob = Promise.all(cat.indicators.map(evalSignal));
   const jobs = [];
   for (const c of cat.categories) {
     const inds = cat.indicators.filter(i => i.category === c.id);
@@ -344,14 +508,17 @@ async function main() {
     app.appendChild(sec);
     for (const ind of inds) {
       const slot = el('<div class="card"><div class="name-zh">' + esc(ind.name_zh) + '</div><div class="mode">載入中…</div></div>');
+      slot.id = 'ind-' + ind.id;
       grid.appendChild(slot);
       jobs.push(buildCard(ind).then(card => {
+        card.id = 'ind-' + ind.id;  // 綜合訊號燈號的跳轉目標
         grid.replaceChild(card, slot);
         drawSpark(card);
       }));
     }
   }
   await Promise.all(jobs);
+  fillSummary(summary, cat.indicators, await sigJob);
 }
 main();
 </script>
