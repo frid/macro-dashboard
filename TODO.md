@@ -14,10 +14,6 @@
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
 - [ ] DA-08 序列 title 修正：對照／組成序列（如 DGS10 掛在 Fed Funds Rate 下）的 title 會帶到所屬指標名稱、易誤解，改用序列自己的名稱；畫面「資料截至」用最後一筆觀測日，`last_updated` 是 FRED 檔案更新日；TradingView 序列（`TV_*`）`last_updated` 為 null，一律用最後一筆觀測日
 - [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
-- [ ] DA-10 日資料改用即時來源（FRED 日資料約落後 1–2 個營業日，例：2026-10-16 VIX 收 19.99，FRED `VIXCLS` 只到 10-15 的 16.46）
-  - VIX：主序列改 Yahoo `^VIX`，FRED `VIXCLS` 留作對照
-  - 其他 FRED 日資料也改用即時來源：`DFF`／`DFEDTARU`／`DFEDTARL`（聯邦基金利率）、`DGS10`、`SOFR`、`T10Y3M`／`T10Y2Y`（期限利差）、`DBAA`／`DAAA`、`BAMLC0A4CBBB`（信用利差）、`DTB3`、`T10YIE`（損益兩平通膨）、`DTWEXBGS`；逐一找可用來源，找不到即時來源的維持 FRED 並在畫面註明延遲
-  - 換來源後的序列與 FRED 原序列做一致性比對（同 DA-04 做法）；用 Yahoo 等非官方來源時依 CLAUDE.md 註明
 - [ ] DA-11 加上 FED Watch 來源顯示
 - [ ] DA-12 Philly Fed 未來指數：抓 `GAFDFSA066MSFRBPHI`（Future General Activity），加進 `philly-fed` 當雙軸對照（現況 vs 未來）[K 124]；UI-02 雙軸已就緒，資料到位後補 `axis: "right"`
 - [ ] DA-13 補齊 `indicators.json` 的 `derived`（qma／yma／yoy）：UI-02 詳細圖依 `derived` 決定畫不畫 3 月均／12 月均與 YoY 圖，目前只有汽車銷售、M2、黃金、CPI、PPI 標了 qma／yma；逐一對照講義各指標圖頁補齊（季資料只有 YMA，如債務槓桿 [K 69–91]）
@@ -45,6 +41,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] DA-10 日資料改用即時來源：VIX 主序列改 Cboe 官方 CSV（`CBOE_VIX`，`VIXCLS` 留作對照）；10 年期公債、3 個月國庫券改為 FRED 歷史接上美國財政部最新日（`UST_DGS10`、`UST_DTB3`），皆比 FRED 早 1 個營業日、重疊期間 100% 相同；T10Y3M／T10Y2Y／T10YIE、DFF／SOFR、目標區間已與官方同步，DBAA／DAAA／BAMLC0A4CBBB／DTWEXBGS 無免費即時來源，維持 FRED 並以 `lag` 在畫面註明延遲；比對紀錄見 DA-04 決策檔（完成 2026-10-18）
 - [x] UI-09 版權說明：資料來源（FRED 等各序列來源與使用條款）、講義出處（郭維裕《Fantastic Economic Indicators》，內容為自行摘要）、製作者；放頁尾或獨立「關於」區塊（可與 UI-06 合併做）（完成 2026-10-18）
 - [x] DC-01 README：資料來源依 FRED／Yahoo／EIA／TradingView／衍生序列列出序列代碼、替代與無公開資料指標、各來源條款；更新資料步驟（Node 24、fetch→derive、失敗不覆蓋）、本機預覽、專案結構（完成 2026-10-18）
 - [x] UI-02 指標詳細圖：點卡片（或鍵盤 Enter／Space）開 `<dialog>`，照講義格式畫原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影，下方 YoY 圖；`thresholds[]` 畫門檻虛線（新增 `on:"yoy"`、`series` 欄位），`series[].axis` 支援雙軸對照（初領／續領、U6／兼職、耐久財、房貸）；lttb 降取樣＋上下圖連動縮放（預設近 20 年）；`?detail=<id>` 直接開啟（完成 2026-10-18）
