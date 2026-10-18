@@ -16,6 +16,7 @@
 - [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
 - [ ] DA-12 Philly Fed 未來指數：抓 `GAFDFSA066MSFRBPHI`（Future General Activity），加進 `philly-fed` 當雙軸對照（現況 vs 未來）[K 124]；UI-02 雙軸已就緒，資料到位後補 `axis: "right"`
 - [ ] DA-13 補齊 `indicators.json` 的 `derived`（qma／yma／yoy）：UI-02 詳細圖依 `derived` 決定畫不畫 3 月均／12 月均與 YoY 圖，目前只有汽車銷售、M2、黃金、CPI、PPI 標了 qma／yma；逐一對照講義各指標圖頁補齊（季資料只有 YMA，如債務槓桿 [K 69–91]）
+- 找出燈號變換的合適的數據依據
 
 # 畫面
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
