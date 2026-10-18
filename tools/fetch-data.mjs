@@ -653,9 +653,9 @@ async function saveFedWatch() {
   const out = await fetchFedWatch();
   const content = JSON.stringify(out, null, 2) + '\n';
   JSON.parse(content); // 寫檔前自我檢查
-  await writeAtomic(FEDWATCH_OUT, content);
+  const changed = await writeIfChanged(FEDWATCH_OUT, content, ['generated_at']);
   const s = out.summary.now;
-  console.log(`OK   FEDWATCH（${out.meeting.date} 會議，${out.meeting.contract} ${out.meeting.price}，價格日 ${out.price_date}；降 ${s.ease}／不變 ${s.no_change}／升 ${s.hike}）`);
+  console.log(`${changed ? 'OK  ' : 'SAME'} FEDWATCH${changed ? '' : '（unchanged）'}（${out.meeting.date} 會議，${out.meeting.contract} ${out.meeting.price}，價格日 ${out.price_date}；降 ${s.ease}／不變 ${s.no_change}／升 ${s.hike}）`);
 }
 
 // ---- 由日期間距推斷頻率（取間距中位數，天）----
@@ -699,6 +699,18 @@ async function writeAtomic(file, content) {
   }
 }
 
+// 數據沒變就不重寫檔（DA-03）：舊檔存在且除 ignoreKeys（抓取時間類欄位）外內容相同 → 回傳 false，不寫檔
+async function writeIfChanged(file, content, ignoreKeys) {
+  try {
+    const strip = (o) => JSON.stringify(Object.fromEntries(Object.entries(o).filter(([k]) => !ignoreKeys.includes(k))));
+    if (strip(JSON.parse(await readFile(file, 'utf8'))) === strip(JSON.parse(content))) return false;
+  } catch {
+    // 舊檔不存在或無法解析 → 照常寫入
+  }
+  await writeAtomic(file, content);
+  return true;
+}
+
 async function main() {
   const catalog = JSON.parse(await readFile(CATALOG, 'utf8'));
   const all = collectSeries(catalog);
@@ -711,6 +723,8 @@ async function main() {
 
   const ok = [];
   const failed = [];
+  const updated = []; // 有寫檔（新增或數據變動）
+  const unchanged = []; // 數據沒變，不重寫
 
   const save = async (meta, observations, lastUpdated) => {
     const out = {
@@ -726,10 +740,11 @@ async function main() {
     };
     const content = serialize(out);
     JSON.parse(content); // 寫檔前自我檢查
-    await writeAtomic(path.join(OUT_DIR, `${meta.id}.json`), content);
+    const changed = await writeIfChanged(path.join(OUT_DIR, `${meta.id}.json`), content, ['fetched_at']);
     ok.push(meta.id);
+    (changed ? updated : unchanged).push(meta.id);
     const last = observations.at(-1);
-    console.log(`OK   ${meta.id}（${meta.source}，${observations.length} 筆，最新 ${last[0]} = ${last[1]}）`);
+    console.log(`${changed ? 'OK  ' : 'SAME'} ${meta.id}${changed ? '' : '（unchanged）'}（${meta.source}，${observations.length} 筆，最新 ${last[0]} = ${last[1]}）`);
   };
   const fail = (id, reason) => {
     failed.push({ id, reason });
@@ -780,6 +795,7 @@ async function main() {
   }
 
   console.log(`\n成功 ${ok.length}：${ok.join(' ')}`);
+  console.log(`序列：updated ${updated.length}／unchanged ${unchanged.length}／FAIL ${failed.filter((f) => f.id !== 'FEDWATCH').length}（FEDWATCH 見上方 OK／SAME／FAIL 行）`);
   if (failed.length) {
     console.log(`失敗 ${failed.length}：`);
     for (const f of failed) console.log(`  ${f.id}：${f.reason}`);

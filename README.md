@@ -184,6 +184,18 @@ TradingView 圖表資料的取得方式為非官方協定，僅供學習使用�
 - 某個序列抓取失敗時，不會建立或覆蓋該序列的舊檔，其餘序列照常寫入，結束碼為 1。
 - 衍生序列所需的輸入檔缺少、或算出 0 筆時，同樣不建立或覆蓋舊檔，結束碼為 1。
 - 因此建議先執行步驟 1，確認沒有 FAIL 後再執行步驟 2。
+- 數據沒變時不重寫檔（只有 `fetched_at`／`generated_at` 這類抓取時間變動不算），log 標 `SAME ... （unchanged）`，結尾列出 updated／unchanged／FAIL 數；因此變更紀錄只會出現真正有新數據的檔。
+
+### 自動排程（DA-03）
+
+GitHub Actions workflow `.github/workflows/update-data.yml` 每天自動更新資料：
+
+- 時間：每日台灣 06:30（cron `30 22 * * *`，UTC 22:30）。依序跑 `fetch-data.mjs`、`derive-data.mjs`，結果（FAIL 行、TradingView 結果、更新統計）寫進該次執行的 Summary。
+- 資料 commit 到 `main`（GitHub Pages 從 `main` 發佈，commit 後網站即更新），只 add `data/`，訊息為 `data: 每日資料更新 YYYY-MM-DD`；同一個 job 再把 `main` 以 `--no-ff` 合回 `dev` 並 push，避免日後 `dev` → `main` release 時資料檔衝突。合回 `dev` 衝突時會 abort、不 push `dev`，job 標失敗並在 Summary 說明。分支策略見 [doc/decisions/SU-02-技術選型.md](doc/decisions/SU-02-技術選型.md)。
+- 數據沒變就不 commit。
+- 失敗處理：單一來源（含 TradingView 雲端 IP 被擋）抓取失敗時保留舊檔、其餘照常更新並 commit；有任何失敗時 job 最後標為失敗，讓 GitHub 寄通知。
+- 手動觸發：GitHub 的 Actions 頁選 `update-data` → Run workflow；或 `gh workflow run update-data.yml --ref main`。
+- workflow 檔要 release 到 `main` 後才會依排程執行（排程只讀預設分支）；在此之前，開發中的 `da-03-actions` 分支有暫時的 push 觸發做實測，只跑不 commit。
 
 ### 本機預覽
 

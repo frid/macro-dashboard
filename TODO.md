@@ -8,7 +8,7 @@
 # 專案設定
 
 # 資料
-- [ ] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
+- [~] DA-03 GitHub Actions 排程（每日）跑 DA-02 並 commit 資料（依賴 SU-01）
   - DA-04 起含 TradingView WebSocket 來源：要實測雲端 IP 能否連線；不行就在 Actions 跳過該來源、保留舊檔
 - [ ] DA-06 台灣指標是否納入（國發會景氣對策信號、台灣 PMI 等）
   - SU-03 確認講義沒有台灣指標；要你決定：要不要當延伸功能加進來（建議放在 1.0 之後）
@@ -16,7 +16,7 @@
 - [ ] DA-09 ISM 製造業資料版本核對：`TV_USBCOI` 與 MacroMicro 在 2007–2020 年有差異（最大 2.8 點、6 個月 50 線判讀不同），以 ISM 官網歷史表確認哪一邊是現行季調修正值；若 TradingView 是首次公布值，畫面註明 [K 51–55]
 - [ ] DA-12 Philly Fed 未來指數：抓 `GAFDFSA066MSFRBPHI`（Future General Activity），加進 `philly-fed` 當雙軸對照（現況 vs 未來）[K 124]；UI-02 雙軸已就緒，資料到位後補 `axis: "right"`
 - [ ] DA-13 補齊 `indicators.json` 的 `derived`（qma／yma／yoy）：UI-02 詳細圖依 `derived` 決定畫不畫 3 月均／12 月均與 YoY 圖，目前只有汽車銷售、M2、黃金、CPI、PPI 標了 qma／yma；逐一對照講義各指標圖頁補齊（季資料只有 YMA，如債務槓桿 [K 69–91]）
-- 找出燈號變換的合適的數據依據
+- [ ] DA-14 找出燈號變換的合適的數據依據
 
 # 畫面
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
