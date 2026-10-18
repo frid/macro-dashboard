@@ -7,16 +7,25 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/6.1.0/echarts.min.js" integrity="sha384-C2iskrW/uPW46KzOjrvJIQo4YkV8lkD+QS0CrDN18IIPIpT/g2USu8bTP3nvmIAD" crossorigin="anonymous"></script>
 <style>
 :root {
-  --bg: #f5f6f8;
-  --card: #ffffff;
-  --text: #1f2933;
-  --muted: #6b7785;
-  --border: #dde1e7;
-  --up: #1f6fb5;
-  --down: #d2691e;
-  --accent: #2b4a6f;
-  --sub: #b45309;
-  --sub-bg: #fef3c7;
+  /* 配色取自 Friedrich〈霧海上的旅人〉：岩石、霧、天空、遠山、赭色 */
+  --bg: #ECEAE7;
+  --card: #FBFAF8;
+  --text: #2D261C;
+  --muted: #615D58;
+  --border: #D0CBCA;
+  --up: #4A5F7A;
+  --down: #8A5A2B;
+  --accent: #3F4856;
+  --sub: #8A5A2B;
+  --sub-bg: #F3EBDD;
+  --pending-bg: #E6E3DF;
+  --tag-bg: #E1E3E7;
+  --danger: #A8433A;
+  --danger-bg: #F6E6E3;
+  --danger-text: #6E2A23;
+  --on-banner: #FFFFFF;
+  --banner-shade: 31, 28, 24;
+  --spark-area: rgba(63, 72, 86, 0.10);
 }
 * { box-sizing: border-box; }
 body {
@@ -27,9 +36,38 @@ body {
   line-height: 1.5;
 }
 header {
-  background: var(--accent);
-  color: #fff;
-  padding: 24px 16px;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  min-height: 280px;
+  /* 上層深色漸層（底部最深）讓白字可讀；底圖為〈霧海上的旅人〉裁切，旅人約在水平 50% */
+  background-color: var(--accent);
+  background-image:
+    linear-gradient(to top, rgba(var(--banner-shade), .78) 0%, rgba(var(--banner-shade), .45) 45%, rgba(var(--banner-shade), .08) 100%),
+    url('assets/wanderer-banner.jpg');
+  background-size: cover;
+  background-position: 50% 40%;
+  color: var(--on-banner);
+  padding: 24px 16px 44px;
+  text-shadow: 0 1px 3px rgba(var(--banner-shade), .7);
+}
+header .inner { width: 100%; }
+header .credit {
+  position: absolute;
+  right: 16px;
+  bottom: 8px;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  font-size: .7rem;
+  line-height: 1.4;
+  text-align: right;
+  opacity: .75;
+}
+header .credit a { color: inherit; }
+@media (max-width: 600px) {
+  header { min-height: 180px; padding-bottom: 56px; }
+  header h1 { font-size: 1.3rem; }
+  header .credit { left: 16px; font-size: .62rem; }
 }
 header .inner, main, footer { max-width: 1400px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
 header .inner { padding: 0; }
@@ -56,8 +94,8 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
   gap: 4px;
   min-width: 0;
 }
-.card.pending { background: #eceef1; color: var(--muted); }
-.card.error { border-color: #c0392b; }
+.card.pending { background: var(--pending-bg); color: var(--muted); }
+.card.error { border-color: var(--danger); }
 .card .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
 .card .name-zh { font-weight: 600; font-size: 1rem; }
 .card .name-en { color: var(--muted); font-size: .8rem; }
@@ -66,7 +104,7 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
   font-size: .72rem;
   padding: 1px 7px;
   border-radius: 10px;
-  background: #e3ebf5;
+  background: var(--tag-bg);
   color: var(--accent);
   white-space: nowrap;
   cursor: default;
@@ -89,8 +127,8 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .mode { font-size: .75rem; color: var(--muted); }
 .spark { width: 100%; height: 48px; }
 .meta { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
-.errmsg { color: #c0392b; font-size: .85rem; word-break: break-all; }
-.fatal { background: #fdecea; border: 1px solid #c0392b; color: #7b241c; padding: 16px; border-radius: 8px; margin: 16px 0; }
+.errmsg { color: var(--danger); font-size: .85rem; word-break: break-all; }
+.fatal { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger-text); padding: 16px; border-radius: 8px; margin: 16px 0; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
 </style>
 </head>
@@ -101,9 +139,10 @@ footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-to
     <p>依郭維裕教授講義《Fantastic Economic Indicators》整理（政大 EMBA「生技產業之投資分析與個案探討」）。</p>
     <p>指標依 GDP = C（消費）＋ I（投資）＋ G（政府）＋ NX（淨出口）分類，另加 MC（多重成分）與 IFU（通膨／恐慌／不確定）。</p>
   </div>
+  <p class="credit">Caspar David Friedrich〈霧海上的旅人〉Wanderer above the Sea of Fog（c. 1818）・Hamburger Kunsthalle・Public domain, via <a href="https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" target="_blank" rel="noopener">Wikimedia Commons</a></p>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.5.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.6.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 
 <script>
 'use strict';
@@ -306,6 +345,9 @@ function drawSpark(card) {
   const cut = (parseInt(lastDate.slice(0, 4), 10) - 5) + lastDate.slice(4);
   let data = pts.filter(p => p[0] >= cut);
   if (data.length < 2) data = pts.slice(-60);
+  const css = getComputedStyle(document.documentElement);
+  const lineColor = css.getPropertyValue('--accent').trim();
+  const areaColor = css.getPropertyValue('--spark-area').trim();
   const chart = echarts.init(card.querySelector('.spark'), null, { renderer: 'svg' });
   chart.setOption({
     animation: false,
@@ -314,8 +356,8 @@ function drawSpark(card) {
     yAxis: { type: 'value', show: false, scale: true },
     series: [{
       type: 'line', data: data, showSymbol: false, silent: true,
-      lineStyle: { width: 1.5, color: '#2b4a6f' },
-      areaStyle: { color: 'rgba(43,74,111,0.08)' }
+      lineStyle: { width: 1.5, color: lineColor },
+      areaStyle: { color: areaColor }
     }]
   });
   window.addEventListener('resize', () => chart.resize());
