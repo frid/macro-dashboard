@@ -175,6 +175,48 @@ section.cat h2 .count { color: var(--muted); font-weight: normal; font-size: .85
 .light .lwhy { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; word-break: break-word; }
 .fatal { background: var(--danger-bg); border: 1px solid var(--danger); color: var(--danger-text); padding: 16px; border-radius: 8px; margin: 16px 0; }
 footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+/* 指標詳細圖（UI-02） */
+.card.clickable { cursor: pointer; }
+.card.clickable:hover { border-color: var(--accent); }
+.card.clickable:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+dialog.detail {
+  width: min(1100px, 95vw);
+  max-width: 95vw;
+  max-height: 94vh;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  color: var(--text);
+}
+dialog.detail::backdrop { background: rgba(var(--banner-shade), .55); }
+.detail .dbar { display: flex; align-items: flex-start; gap: 12px; padding: 14px 16px 10px; border-bottom: 1px solid var(--border); }
+.detail .dhead { flex: 1; min-width: 0; }
+.detail .dtitle { margin: 0; font-size: 1.2rem; }
+.detail .dtitle .en { color: var(--muted); font-weight: normal; font-size: .9rem; margin-left: 6px; }
+.detail .dmeta { margin-top: 4px; font-size: .8rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; }
+.detail .dclose {
+  flex: none;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  border-radius: 6px;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.detail .dclose:hover { border-color: var(--accent); }
+.detail .dbody { padding: 8px 16px 16px; }
+.detail .dcap { margin: 8px 0 0; font-size: .82rem; color: var(--muted); }
+.detail .dchart { width: 100%; height: 400px; }
+.detail .dchart.yoy { height: 260px; }
+@media (max-width: 600px) {
+  .detail .dbar { padding: 10px 12px 8px; }
+  .detail .dbody { padding: 4px 8px 12px; }
+  .detail .dchart { height: 300px; }
+  .detail .dchart.yoy { height: 210px; }
+}
 </style>
 </head>
 <body>
@@ -187,7 +229,11 @@ footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-to
   <p class="credit">Caspar David Friedrich〈霧海上的旅人〉Wanderer above the Sea of Fog（c. 1818）・Hamburger Kunsthalle・Public domain, via <a href="https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_Sea_of_Fog.jpeg" target="_blank" rel="noopener">Wikimedia Commons</a></p>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.9.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.10.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<dialog class="detail" id="detail" aria-labelledby="detail-title">
+  <div class="dbar"><div class="dhead"></div><button type="button" class="dclose" aria-label="關閉詳細圖">✕</button></div>
+  <div class="dbody"></div>
+</dialog>
 
 <script>
 'use strict';
@@ -535,6 +581,229 @@ function fillSummary(sec, inds, sigs) {
   });
 }
 
+// ---- 指標詳細圖（UI-02）：原值＋3 月均＋12 月均＋NBER 衰退陰影，下方 YoY 圖 ----
+let recessionId = 'USREC';
+const detail = { charts: [], token: 0, onResize: null };
+
+// 按日期視窗的移動平均：取日期落在 (d − n 個月, d] 的觀測平均；雙指標 O(n)，月／週／日資料都適用。
+// 視窗未滿（資料起點晚於 d − n 個月）的點不輸出。
+function rollingMean(pts, months) {
+  const out = [];
+  let j = 0, sum = 0;
+  for (let i = 0; i < pts.length; i++) {
+    sum += pts[i][1];
+    const cut = monthsBefore(pts[i][0], months);
+    while (pts[j][0] <= cut) { sum -= pts[j][1]; j++; }
+    if (pts[0][0] <= cut) out.push([pts[i][0], sum / (i - j + 1)]);
+  }
+  return out;
+}
+
+// USREC 連續為 1 的區段 → markArea 區間；結束點取下一筆（0）的日期，讓陰影蓋滿最後一個月
+function recessionBands(obs) {
+  const bands = [];
+  let start = null;
+  for (let i = 0; i < obs.length; i++) {
+    const on = obs[i][1] === 1;
+    if (on && start === null) start = obs[i][0];
+    if (!on && start !== null) { bands.push([start, obs[i][0]]); start = null; }
+  }
+  if (start !== null) bands.push([start, obs[obs.length - 1][0]]);
+  return bands;
+}
+
+function axisNum(v) {
+  return Math.abs(v) >= 10000
+    ? new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(v)
+    : String(Math.round(v * 100) / 100);
+}
+
+function closeDetail() {
+  const dlg = document.getElementById('detail');
+  if (dlg.open) dlg.close();
+}
+function disposeDetail() {
+  detail.token++;
+  if (detail.onResize) window.removeEventListener('resize', detail.onResize);
+  detail.onResize = null;
+  detail.charts.forEach(c => c.dispose());
+  detail.charts = [];
+  if (window.echarts) echarts.disconnect('detail');
+  const dlg = document.getElementById('detail');
+  dlg.querySelector('.dbody').innerHTML = '';
+}
+
+// 決定詳細圖要畫哪些序列：spread 指標畫利差；有 axis:"left" 的序列就以它為主畫序列，否則用 main；axis:"right" 畫右軸
+function detailPlan(ind) {
+  const rule = DISPLAY_RULES[ind.id] || { mode: 'raw' };
+  const list = ind.series || [];
+  if (rule.mode === 'spread') {
+    return { spread: true, ids: [rule.a, rule.b], left: null, right: null };
+  }
+  const left = list.find(s => s.axis === 'left') || list.find(s => s.role === 'main');
+  const right = list.find(s => s.axis === 'right') || null;
+  return { spread: false, ids: right ? [left.id, right.id] : [left.id], left: left, right: right };
+}
+
+async function openDetail(ind) {
+  const dlg = document.getElementById('detail');
+  disposeDetail();
+  const token = detail.token;
+  const plan = detailPlan(ind);
+  const defOf = id => (ind.series || []).find(x => x.id === id) || {};
+  const isSub = ind.status === 'substitute' || plan.ids.some(id => defOf(id).substitute);
+  const srcText = plan.ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
+  const tag = ind.timing ? '<span class="tag" title="' + esc(ind.timing_note || TIMING[ind.timing]) + '">' + TIMING[ind.timing] + '</span>' : '';
+  dlg.querySelector('.dhead').innerHTML =
+    '<h2 class="dtitle" id="detail-title">' + esc(ind.name_zh) + '<span class="en">' + esc(ind.name_en) + '</span></h2>' +
+    '<div class="dmeta">' + tag + (isSub ? '<span class="badge-sub">替代</span>' : '') +
+    '<span>序列：' + esc(plan.ids.join('、')) + '</span><span>來源：' + esc(srcText) + '</span>' +
+    '<span class="dasof">資料截至 …</span>' + (ind.pages ? '<span>講義 [' + esc(ind.pages) + ']</span>' : '') + '</div>';
+  const body = dlg.querySelector('.dbody');
+  body.innerHTML = '<p class="mode">載入中…</p>';
+  if (!dlg.open) dlg.showModal();
+
+  let raw, rightPts = null, recObs = [];
+  try {
+    if (plan.spread) {
+      raw = (await loadPoints(plan.ids, 'spread')).pts;
+    } else {
+      const loaded = await Promise.all(plan.ids.map(loadSeries));
+      raw = validObs(loaded[0]);
+      if (loaded[1]) rightPts = validObs(loaded[1]);
+    }
+    try { recObs = validObs(await loadSeries(recessionId)); } catch (e) { recObs = []; }
+  } catch (e) {
+    if (token === detail.token) body.innerHTML = '<p class="errmsg">' + esc(e.message) + '</p>';
+    return;
+  }
+  if (token !== detail.token) return;  // 載入期間已關閉或換了指標
+  if (!raw.length) {
+    body.innerHTML = '<p class="errmsg">序列 ' + esc(plan.ids.join('、')) + ' 無有效資料</p>';
+    return;
+  }
+  drawDetail(ind, plan, raw, rightPts, recObs, body, dlg);
+}
+
+function drawDetail(ind, plan, raw, rightPts, recObs, body, dlg) {
+  const derived = ind.derived || [];
+  const hasYoy = derived.includes('yoy');
+  const freq = ind.frequency;
+  const lastDate = raw[raw.length - 1][0];
+  dlg.querySelector('.dasof').textContent = '資料截至 ' + fmtDate(lastDate, freq);
+
+  const css = getComputedStyle(document.documentElement);
+  const cv = n => css.getPropertyValue(n).trim();
+  const C = {
+    raw: cv('--accent'), qma: cv('--sub'), yma: cv('--sig-up'), right: cv('--danger'),
+    text: cv('--text'), muted: cv('--muted'), border: cv('--border'),
+    shade: 'rgba(' + cv('--banner-shade') + ', 0.12)'
+  };
+  const label = s => s.id + (s.note ? ' ' + s.note : '');
+  const leftName = plan.spread ? '原值（' + plan.ids.join(' − ') + '）' : '原值 ' + plan.left.id;
+  const caption = plan.spread
+    ? '利差 ' + plan.ids.join(' − ') + '（百分點）'
+    : (plan.right ? '左軸 ' + label(plan.left) + '；右軸 ' + label(plan.right) : label(plan.left));
+
+  // 兩張圖用相同的 x 範圍，dataZoom 連動才會對齊
+  let xMin = raw[0][0];
+  if (rightPts && rightPts.length && rightPts[0][0] < xMin) xMin = rightPts[0][0];
+  const xRange = { min: Date.parse(xMin), max: Date.parse(lastDate) };
+  const zoomStart = Date.parse(monthsBefore(lastDate, 240));
+  const bands = recessionBands(recObs).map(b => [{ xAxis: b[0] }, { xAxis: b[1] }]);
+  const recArea = { silent: true, itemStyle: { color: C.shade }, data: bands };
+  const markLines = list => list.length ? {
+    silent: true, symbol: 'none',
+    lineStyle: { type: 'dashed', color: C.muted, width: 1 },
+    label: { formatter: p => p.data.name, position: 'insideEndTop', color: C.muted, fontSize: 11 },
+    data: list.map(t => Object.assign({ yAxis: t.value, name: t.label }, t.pos ? { label: { position: t.pos } } : {}))
+  } : undefined;
+  const line = (name, data, color, extra) => Object.assign({
+    type: 'line', name: name, data: data, showSymbol: false, sampling: 'lttb',
+    lineStyle: { width: 1.5, color: color }, itemStyle: { color: color }
+  }, extra || {});
+  const baseOption = (withSlider) => ({
+    animation: false,
+    textStyle: { color: C.text },
+    tooltip: { trigger: 'axis', confine: true },
+    legend: { top: 0, textStyle: { color: C.text } },
+    grid: { left: 56, right: plan.right ? 60 : 24, top: 34, bottom: withSlider ? 64 : 28 },
+    xAxis: { type: 'time', min: xRange.min, max: xRange.max, axisLabel: { color: C.muted, hideOverlap: true }, axisLine: { lineStyle: { color: C.border } } },
+    dataZoom: [{ type: 'inside', startValue: zoomStart, endValue: xRange.max }]
+      .concat(withSlider ? [{ type: 'slider', startValue: zoomStart, endValue: xRange.max, bottom: 8, height: 22, labelFormatter: v => echarts.time.format(v, '{yyyy}-{MM}', false) }] : [])
+  });
+  const yAxis = (pos, extra) => Object.assign({
+    type: 'value', scale: true, position: pos,
+    axisLabel: { color: C.muted, formatter: axisNum },
+    splitLine: { lineStyle: { color: C.border, opacity: .6 } }
+  }, extra || {});
+
+  // 門檻若帶 series，只在該序列是主圖（plan.left）時才畫；沒有 series 的照常畫
+  const primaryId = plan.left ? plan.left.id : null;
+  const thOk = t => !t.series || t.series === primaryId;
+
+  // 上圖：原值（＋右軸對照）＋ QMA ＋ YMA
+  const rawTh = (ind.thresholds || []).filter(t => t.on !== 'yoy' && thOk(t));
+  const top = [line(leftName + (plan.right ? '（左軸）' : ''), raw, C.raw, {
+    markArea: recArea, markLine: markLines(rawTh), z: 3
+  })];
+  if (derived.includes('qma')) top.push(line('3 月均 (QMA)', rollingMean(raw, 3), C.qma));
+  if (derived.includes('yma')) top.push(line('12 月均 (YMA)', rollingMean(raw, 12), C.yma));
+  if (plan.right && rightPts) top.push(line('原值 ' + plan.right.id + '（右軸）', rightPts, C.right, { yAxisIndex: 1 }));
+  const topY = [yAxis('left')];
+  if (plan.right) topY.push(yAxis('right', { splitLine: { show: false } }));
+
+  let html = '<p class="dcap">' + esc(caption) + '・灰色區塊為 NBER 衰退期（' + esc(recessionId) + '）</p><div class="dchart top"></div>';
+  if (hasYoy) html += '<p class="dcap">年增率 YoY（%）</p><div class="dchart yoy"></div>';
+  body.innerHTML = html;
+
+  const topChart = echarts.init(body.querySelector('.dchart.top'));
+  topChart.setOption(Object.assign(baseOption(!hasYoy), {
+    yAxis: topY,
+    series: top,
+    tooltip: { trigger: 'axis', confine: true, valueFormatter: v => v == null ? '—' : fmtNum(v, 'raw') }
+  }));
+  detail.charts.push(topChart);
+
+  if (hasYoy) {
+    const yoyTh = (ind.thresholds || []).filter(t => t.on === 'yoy' && thOk(t));
+    if (!yoyTh.some(t => t.value === 0)) yoyTh.push({ value: 0, label: 'YoY 0', pos: 'insideStartBottom' });  // 標籤放左側，避免與其他門檻標籤重疊
+    const yoyName = plan.right ? 'YoY ' + plan.left.id : 'YoY';
+    const ys = [line(yoyName, transform('yoy', raw), C.raw, { markArea: recArea, markLine: markLines(yoyTh) })];
+    if (plan.right && rightPts) ys.push(line('YoY ' + plan.right.id, transform('yoy', rightPts), C.right));
+    const yoyChart = echarts.init(body.querySelector('.dchart.yoy'));
+    yoyChart.setOption(Object.assign(baseOption(true), {
+      yAxis: [yAxis('left', { axisLabel: { color: C.muted, formatter: v => axisNum(v) + '%' } })],
+      series: ys,
+      tooltip: { trigger: 'axis', confine: true, valueFormatter: v => v == null ? '—' : v.toFixed(2) + '%' }
+    }));
+    detail.charts.push(yoyChart);
+  }
+
+  detail.charts.forEach(c => { c.group = 'detail'; });
+  if (detail.charts.length > 1) echarts.connect('detail');
+  detail.onResize = () => detail.charts.forEach(c => c.resize());
+  window.addEventListener('resize', detail.onResize);
+}
+
+function makeClickable(card, ind) {
+  card.classList.add('clickable');
+  card.tabIndex = 0;
+  card.setAttribute('role', 'button');
+  card.setAttribute('aria-label', ind.name_zh + ' ' + ind.name_en + '：開啟詳細圖');
+  card.title = '點擊開啟詳細圖';
+  card.addEventListener('click', () => openDetail(ind));
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDetail(ind); }
+  });
+}
+
+function initDetailDialog() {
+  const dlg = document.getElementById('detail');
+  dlg.querySelector('.dclose').addEventListener('click', closeDetail);
+  dlg.addEventListener('close', disposeDetail);  // Esc 或關閉鈕都會觸發
+}
+
 async function main() {
   const app = document.getElementById('app');
   let cat;
@@ -547,6 +816,12 @@ async function main() {
       '）。<br>本頁需透過 HTTP 伺服器開啟，直接用 file:// 開啟會被瀏覽器擋下 fetch。可在專案目錄執行 <code>python3 -m http.server</code> 後瀏覽 http://localhost:8000/。</div>';
     return;
   }
+
+  if (cat.recession && cat.recession.series) recessionId = cat.recession.series;
+  initDetailDialog();
+  const wanted = new URLSearchParams(location.search).get('detail');  // ?detail=<指標 id> 載入即開詳細圖
+  const wantedInd = wanted ? cat.indicators.find(i => i.id === wanted) : null;
+  if (wantedInd) openDetail(wantedInd);
 
   app.innerHTML = '';
   const summary = summarySection();
@@ -567,6 +842,7 @@ async function main() {
         card.id = 'ind-' + ind.id;  // 綜合訊號燈號的跳轉目標
         grid.replaceChild(card, slot);
         drawSpark(card);
+        if (card._spark) makeClickable(card, ind);
       }));
     }
   }
