@@ -22,7 +22,6 @@
 
 # 畫面
 - [ ] UI-02 指標詳細圖：點卡片展開，照講義格式「原值＋3 月均（QMA）＋12 月均（YMA）＋NBER 衰退陰影」，下方配 YoY 圖；門檻線（PMI 50、Sahm 0.5、Philly Fed 0、期限利差 0、債務 YoY 3%、損益兩平通膨 2%、VIX 12／20／30、YoY 0 線）；支援雙軸對照（如初領 vs 續領）
-- [ ] UI-03 綜合訊號總覽：依講義「越多指標指向同方向越可信」[K 4]，列出各指標目前偏擴張／偏收縮的燈號與統計
 - [ ] UI-04 特殊圖：Beveridge 曲線（失業率 × 職缺率散佈）、殖利率曲線利差、Sahm Rule
 - [ ] UI-05 公布行事曆：各指標下次公布時間（依講義公布規則）
 - [ ] UI-06 頁尾：資料來源與講義出處聲明、版號（讀 `VERSION`）、最後更新日期
@@ -43,6 +42,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
+- [x] UI-03 綜合訊號總覽：頁首下方新增 `section#signal-summary`，依 [K 4] 統計 19 項計入指標的擴張／中性／收縮（13 項不計），按領先／同時／落後拆表、給多數方向結論，32 個燈號格附判斷依據並可跳到卡片；判讀規則寫成 `indicators.json` 的 `signal` 欄位（raw 門檻／yoy／3 月均對 12 月均趨勢），格式寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] DA-05 衍生指標計算：新增 `tools/derive-data.mjs`，由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/`（NFP 月增減／年增率、自算 Sahm Rule（對照 SAHMREALTIME）、CPI／核心 CPI／PCE／核心 PCE／PPI 年增率、BBB−AAA 利差、赤字占 GDP、Beveridge 資料對）；`indicators.json` 加 `derived_series`，格式寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] UI-01 版面骨架 `index.html`：頁首、六大分類分區、32 張指標卡片（最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料截至日）；暫行顯示規則表（NFP 月增減、CPI／PPI／PCE／M2 年增率、信用／TED 利差），來源標示（FRED／TradingView／Yahoo／EIA）、無公開資料灰卡、替代徽章，最小頁尾（完成 2026-10-18）
 - [x] DA-04 非 FRED 指標處理（A1 B1 C1）：`tools/fetch-data.mjs` 新增 YAHOO／EIA／TRADINGVIEW 來源，新序列 `TV_USBCOI`、`TV_USNMBA`（替代）、`TV_BDI`、`YF_DXY`、`YF_GC`（替代）、`EIA_WCESTUS1`；消費者信心 `UMCSENT` 標替代、LME 列 `unavailable`；方案與一致性比對見 `doc/decisions/DA-04-非FRED指標方案.md`（完成 2026-10-18）

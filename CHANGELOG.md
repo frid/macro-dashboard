@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.7.0 — 2026-10-18
+- UI-03 新增綜合訊號總覽：`indicators.json` 每個指標加 `signal` 判讀規則（19 項：原值對門檻、年增率對 0、近 3 月均對近 12 月均；13 項不計），`index.html` 頁首下方顯示擴張／中性／收縮統計（依領先／同時／落後拆表）、多數方向結論 [K 4] 與 32 個燈號格（附判斷依據、點擊跳到卡片）；卡片讀取邏輯抽成共用 `loadPoints()`，SU-02 決策檔補 `signal` 格式
+
 ## 0.6.0 — 2026-10-18
 - DA-05 衍生指標計算：新增 `tools/derive-data.mjs`（Node 24、零套件、原子寫入、輸入缺檔不覆蓋舊檔），由 `data/series/` 算出 12 個衍生序列寫入 `data/derived/<ID>.json`：NFP 月增減與年增率、由 UNRATE 自算 Sahm Rule（附與 SAHMREALTIME 差異統計）、CPI／核心 CPI／PCE／核心 PCE／PPI（PPIFIS、PPIACO）年增率、BBB−AAA 利差（DBAA−DAAA）、赤字占 GDP（MTSDS133FMS 近 12 月合計 ÷ 名目 GDP，附與 FYFSGDA188S 對照）、Beveridge 曲線資料對；`indicators.json` 新增 `derived_series`、預算赤字補 `ratio_gdp`；SU-02 決策檔補衍生檔格式與執行順序（fetch → derive），README 同步
 
