@@ -2,6 +2,9 @@
 
 依政大 EMBA「生技產業之投資分析與個案探討」課程，郭維裕教授講義《Fantastic Economic Indicators — Guide to the 50 Economic Indicators that Really Matter》建立的總體經濟指標儀表板。
 
+- 線上網址：<https://frid.github.io/macro-dashboard/>
+- 原始碼：[github.com/frid/macro-dashboard](https://github.com/frid/macro-dashboard)
+
 > 開發中（版本見 `VERSION`，變更見 `CHANGELOG.md`，待辦見 `TODO.md`）。
 
 ## 指標分類
@@ -25,7 +28,7 @@
 
 ## 技術
 
-純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，預計部署 GitHub Pages。
+純前端靜態網頁（`index.html`＋`data/*.json`），資料由 `tools/fetch-data.mjs` 抓取更新，部署於 GitHub Pages（`main` 分支根目錄）。
 
 ## 聲明
 
