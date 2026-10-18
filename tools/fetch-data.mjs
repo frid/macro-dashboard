@@ -3,6 +3,7 @@
 // 用法：
 //   node tools/fetch-data.mjs                     抓 indicators.json 內所有序列＋USREC
 //   node tools/fetch-data.mjs DGS10 TV_BDI        只抓指定序列
+//   抓完後執行 node tools/derive-data.mjs 重算衍生序列（data/derived/，DA-05）
 // 依 series[].source 分派：
 //   FRED         公開 CSV（fredgraph.csv）
 //   YAHOO        chart API JSON（yahooSymbol，日線）
