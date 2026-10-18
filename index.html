@@ -103,7 +103,7 @@ footer { color: var(--muted); font-size: .8rem; padding-bottom: 24px; padding-to
   </div>
 </header>
 <main id="app"><p>載入中…</p></main>
-<footer>版本 <span id="app-version">0.4.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
+<footer>版本 <span id="app-version">0.5.0</span> ・ 最後更新 <span id="last-updated">2026-10-18</span></footer>
 
 <script>
 'use strict';
@@ -127,6 +127,7 @@ const MODE_LABEL = {
   spread: '利差（百分點）',
   raw: '原值'
 };
+const SOURCE_LABEL = { FRED: 'FRED', TRADINGVIEW: 'TradingView', YAHOO: 'Yahoo Finance', EIA: 'EIA' };
 const TIMING = { L: '領先', C: '同時', G: '落後' };
 
 const seriesCache = new Map();
@@ -230,11 +231,15 @@ function seriesIdsFor(ind) {
 }
 
 async function buildCard(ind) {
-  if (ind.status === 'pending' || !(ind.series && ind.series.length)) {
+  const noSeries = !(ind.series && ind.series.length);
+  if (ind.status === 'unavailable' || noSeries) {
+    const msg = ind.status === 'unavailable' ? '無公開資料' : '無資料';
     const ext = ind.external && ind.external.name
       ? '<div class="mode">原始來源：' + esc(ind.external.name) + '</div>' : '';
+    const note = ind.external && ind.external.note
+      ? '<div class="mode">' + esc(ind.external.note) + '</div>' : '';
     return el('<div class="card pending">' + headHtml(ind) +
-      '<div class="value" style="font-size:1.1rem">資料待補（DA-04）</div>' + ext +
+      '<div class="value" style="font-size:1.1rem">' + msg + '</div>' + ext + note +
       '<div class="meta"><span>' + esc(ind.pages || '') + '</span></div></div>');
   }
 
@@ -275,13 +280,14 @@ async function buildCard(ind) {
     changeHtml = '<span class="change ' + cls + '" title="與前一期（' + esc(fmtDate(prev[0], freq)) + '）比較">' + arrow + ' ' + txt + '</span>';
   }
 
-  const subUsed = loaded.filter(s => s.substitute);
+  const defOf = id => (ind.series || []).find(x => x.id === id) || {};
+  const subUsed = loaded.filter(s => s.substitute || defOf(s.id).substitute);
   const isSub = ind.status === 'substitute' || subUsed.length > 0;
   const subBadge = isSub
     ? '<div><span class="badge-sub">替代</span> <span class="mode">替代序列：' +
       esc((subUsed.length ? subUsed.map(s => s.id) : ids).join('、')) + '</span></div>'
     : '';
-  const srcText = 'FRED: ' + ids.join(', ');
+  const srcText = ids.map(id => (SOURCE_LABEL[defOf(id).source] || defOf(id).source || '來源未標') + ': ' + id).join('；');
 
   const card = el('<div class="card">' + headHtml(ind) + subBadge +
     '<div class="value-row"><span class="value">' + fmtNum(last[1], mode) + '</span>' + changeHtml + '</div>' +

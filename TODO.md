@@ -39,7 +39,7 @@
 - [ ] DC-02 操作手冊 `manual.html`（文字配合截圖，後期）
 
 ## Complete
-- [x] UI-01 版面骨架 `index.html`：頁首、六大分類分區、32 張指標卡片（最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料截至日）；暫行顯示規則表（NFP 月增減、CPI／PPI／PCE／M2 年增率、信用／TED 利差），待補 6 張灰卡、替代徽章，最小頁尾（完成 2026-10-18）
+- [x] UI-01 版面骨架 `index.html`：頁首、六大分類分區、32 張指標卡片（最新值、較前期變動、迷你走勢、領先／同時／落後標籤、資料截至日）；暫行顯示規則表（NFP 月增減、CPI／PPI／PCE／M2 年增率、信用／TED 利差），來源標示（FRED／TradingView／Yahoo／EIA）、無公開資料灰卡、替代徽章，最小頁尾（完成 2026-10-18）
 - [x] DA-04 非 FRED 指標處理（A1 B1 C1）：`tools/fetch-data.mjs` 新增 YAHOO／EIA／TRADINGVIEW 來源，新序列 `TV_USBCOI`、`TV_USNMBA`（替代）、`TV_BDI`、`YF_DXY`、`YF_GC`（替代）、`EIA_WCESTUS1`；消費者信心 `UMCSENT` 標替代、LME 列 `unavailable`；方案與一致性比對見 `doc/decisions/DA-04-非FRED指標方案.md`（完成 2026-10-18）
 - [x] DA-02 抓資料腳本 `tools/fetch-data.mjs`（Node 24、零套件）：從 FRED 公開 CSV 抓序列 → `data/series/<ID>.json`；含 NBER 衰退期 `USREC`；只留 1970-01-01 起，61 個序列，格式定案寫入 SU-02 決策檔（完成 2026-10-18）
 - [x] SU-04 建立 `dev` 分支流程：任務 worktree 從 `dev` 開出、`task-release` 收尾合併進 `dev`、說「release」才用新的 `project-release` skill 把 `dev` 合併到 `main`；CLAUDE.md、task-next、task-release、worker agents 同步（完成 2026-10-18）
