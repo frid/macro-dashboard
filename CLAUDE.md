@@ -2,10 +2,11 @@
 
 總體經濟指標 Dashboard。依政大 EMBA「生技產業之投資分析與個案探討」郭維裕教授講義《Fantastic Economic Indicators》（`Docs/Ref/`）建立，指標依 GDP = C + I + G + NX 分類，另加 MC（多重成分）與 IFU（通膨／恐慌／不確定）。
 
-## 架構（預設，SU-02 定案前可調整）
+## 架構（SU-02 定案）
 
 - 純前端靜態網頁，預計部署 GitHub Pages；不需後端。
-- `index.html`：Dashboard 主頁（圖表庫走 CDN，鎖定確切版號）。
+- `index.html`：Dashboard 主頁（圖表庫 Apache ECharts 6.1.0（cdnjs，含 SRI），鎖定確切版號）。
+- 技術選型決策與理由：`doc/decisions/SU-02-技術選型.md`。
 - `data/indicators.json`：指標目錄（分類、領先／同時／落後、資料來源、序列代碼、公布時間、判讀規則、講義頁碼）。
 - `data/series/<ID>.json`：各序列的歷史資料，由 `tools/fetch-data.mjs` 抓取產生（FRED 公開 CSV 端點，不需 API key）。
 - 之後用 GitHub Actions 排程更新 `data/series/`。

@@ -2,6 +2,9 @@
 
 格式：`## 版號 — YYYY-MM-DD`，條列「任務代號 摘要」。新版本加在最上面。版號規則見 CLAUDE.md §版本。
 
+## 0.1.2 — 2026-10-18
+- SU-02 技術選型定案：單檔 `index.html`＋`data/*.json`，圖表庫 Apache ECharts 6.1.0（cdnjs、鎖版號＋SRI）；新增決策紀錄 `doc/decisions/SU-02-技術選型.md`，CLAUDE.md／README 架構段同步
+
 ## 0.1.1 — 2026-10-18
 - SU-01 建立公開 GitHub repo `frid/macro-dashboard`，開啟 GitHub Pages（`main` 根目錄）；README 加上線上網址與原始碼連結
 
